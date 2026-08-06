@@ -6,14 +6,17 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-01 establishes the monorepository and continuous-integration baseline:
+TASK-02 extends the monorepository baseline with the backend process foundation:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
+- typed environment configuration with production startup validation;
+- FastAPI liveness/readiness routes, request IDs, JSON logs, and Problem Details errors;
+- separate API and placeholder worker console entrypoints;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Business capabilities, API routes, database migrations, background workers, and ML pipelines are intentionally deferred to later tasks. The files under `docs/api`, `docs/database`, `docs/diagrams`, and `docs/sad` remain design-time baselines until their corresponding features are implemented.
+Dataset APIs, database migrations, queue processing, artifact storage, and ML pipelines are intentionally deferred to later tasks. The implemented health routes are synchronized with `docs/api/openapi-design.yaml`; other operations in that file remain design-time contracts until their corresponding features are implemented.
 
 ## Toolchain
 

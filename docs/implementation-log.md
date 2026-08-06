@@ -98,3 +98,71 @@ The SQLAlchemy-to-PostgreSQL connection, temporary Timescale hypertable, Alembic
 ### Contract and architecture impact
 
 The bootstrap does not change any product endpoint, database entity, state machine, or ML/data rule. Therefore the design-time OpenAPI, DDL, ADR index, diagrams, and requirement traceability matrix remain unchanged. `ARCHITECTURE.md` distinguishes the implemented skeleton from those planned contracts.
+
+## TASK-02 — Configuration, logging, errors and health
+
+**Date:** 2026-08-06
+
+**Status:** implemented and locally verified
+
+**Scope:** typed environment settings with production fail-fast rules; FastAPI API and placeholder
+worker entrypoints; JSON logs; request correlation; Ukrainian RFC-style Problem Details responses;
+and database-dependent readiness behind a testable port. The worker queue, persistent database
+engine/session lifecycle, migrations and artifact-volume readiness remain assigned to later tasks.
+
+### Resolved dependency additions
+
+The exact transitive graph remains recorded in `backend/uv.lock`.
+
+| Package | Resolved version | Purpose |
+|---|---:|---|
+| pydantic-settings | 2.14.2 | typed environment sources |
+| Uvicorn | 0.52.1 | API console entrypoint |
+| httpx2 | 2.9.1 | warning-free FastAPI/Starlette TestClient transport |
+
+The existing runtime versions used by this task were FastAPI 0.141.1, Pydantic 2.13.4 and
+SQLAlchemy 2.0.51. CPython 3.13.14 and uv 0.12.2 were retained from the bootstrap baseline.
+
+### Runtime contract
+
+- `APP_ENV=production` requires both `DATABASE_URL` and `CODE_COMMIT`; invalid ports, log levels,
+  sizes and non-`postgresql+asyncpg` database URLs fail during settings construction.
+- `/health/live` reports process health without calling the database port.
+- `/health/ready` executes `SELECT 1` through `ReadinessCheck`; dependency failures return a
+  sanitized `503 application/problem+json` response.
+- A valid caller `X-Request-ID` is preserved. Missing or unsafe values are replaced with UUIDs.
+  Responses and structured request/error logs carry the resolved ID.
+- Unexpected exceptions keep traceback details in JSON logs and return only a generic Ukrainian
+  Problem Details body to clients.
+- `energy-forecast-worker` validates configuration and logging but intentionally exits without a
+  queue loop in this task.
+
+### Verification evidence
+
+Commands were run from the locations required by the engineering instructions. The local shell did
+not expose a bare `uv` executable, so the repository-supported `python -m uv` fallback was used.
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv sync --all-groups` | exit 0; 46 locked packages resolved and checked |
+| `backend` | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` | `python -m uv run ruff format --check .` | exit 0; 15 files already formatted |
+| `backend` | `python -m uv run mypy src tests` | exit 0; no issues in 14 source files |
+| `backend` | `python -m uv run pytest -m "not performance"` | exit 0; 19 collected, 19 passed, 0 failed, 0 skipped |
+| `backend` | `python -m uv run pytest tests\\integration\\test_api_foundation.py` | exit 0; 9 collected, 9 passed, 0 failed, 0 skipped |
+| `backend` | `python -m uv run energy-forecast-worker` | exit 0; emitted one JSON `worker_initialized` record |
+| repository root | transient PyYAML static/runtime OpenAPI assertion script | exit 0; YAML parsed and health/Problem Details contracts verified |
+| repository root | `git diff --check` | exit 0; no whitespace errors |
+| repository root | private tracked-path assertion | exit 0; no private planning paths tracked |
+
+The first inline PowerShell form of the OpenAPI assertion expanded `$ref` and failed with
+`KeyError: ''`; the assertion was rerun from an exact literal here-string and passed. No product
+test failed in the final verification gate.
+
+### Contract and architecture impact
+
+`docs/api/openapi-design.yaml` now documents the correlation header on health responses and requires
+`request_id` in Problem Details. Runtime OpenAPI uses the same `application/problem+json` schema for
+readiness failures. `docs/architecture/traceability.csv`, `ARCHITECTURE.md`, the root README and
+backend README reflect the implemented boundary. No DDL, migration, diagram or ADR changed because
+TASK-02 introduces no persistence model and follows the accepted API/worker and OpenAPI decisions.
