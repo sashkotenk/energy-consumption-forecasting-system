@@ -1,0 +1,872 @@
+openapi: 3.1.0
+info:
+  title: EnergyForecast API
+  version: 0.1.0-design
+  description: >
+    Design-time contract for the EnergyForecast course project.
+    The FastAPI-generated OpenAPI document becomes authoritative after implementation.
+servers:
+  - url: /api/v1
+
+tags:
+  - name: System
+  - name: Datasets
+  - name: Imports
+  - name: Analytics
+  - name: Experiments
+  - name: Forecasts
+  - name: Jobs
+
+paths:
+  /health/live:
+    get:
+      tags: [System]
+      operationId: getLiveness
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HealthResponse"}
+
+  /health/ready:
+    get:
+      tags: [System]
+      operationId: getReadiness
+      responses:
+        "200":
+          description: Local required dependencies are ready
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HealthResponse"}
+        "503": {$ref: "#/components/responses/Problem"}
+
+  /datasets:
+    get:
+      tags: [Datasets]
+      operationId: listDatasets
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PageSize"}
+      responses:
+        "200":
+          description: Dataset page
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DatasetPage"}
+    post:
+      tags: [Datasets]
+      operationId: createDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DatasetCreate"}
+      responses:
+        "201":
+          description: Created dataset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Dataset"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /datasets/{datasetId}:
+    parameters:
+      - {$ref: "#/components/parameters/DatasetId"}
+    get:
+      tags: [Datasets]
+      operationId: getDataset
+      responses:
+        "200":
+          description: Dataset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Dataset"}
+        "404": {$ref: "#/components/responses/Problem"}
+    patch:
+      tags: [Datasets]
+      operationId: updateDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DatasetUpdate"}
+      responses:
+        "200":
+          description: Updated dataset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Dataset"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+    delete:
+      tags: [Datasets]
+      operationId: deleteDataset
+      responses:
+        "204": {description: Deleted}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /datasets/{datasetId}/imports:
+    parameters:
+      - {$ref: "#/components/parameters/DatasetId"}
+    post:
+      tags: [Imports]
+      operationId: createDatasetImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {$ref: "#/components/schemas/DatasetImportForm"}
+      responses:
+        "202":
+          description: Import accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AcceptedJob"}
+        "413": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-imports/{importId}:
+    parameters:
+      - {$ref: "#/components/parameters/ImportId"}
+    get:
+      tags: [Imports]
+      operationId: getDatasetImport
+      responses:
+        "200":
+          description: Import resource
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DatasetImport"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+    get:
+      tags: [Datasets]
+      operationId: getDatasetVersion
+      responses:
+        "200":
+          description: Immutable dataset version
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DatasetVersion"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/quality:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+    get:
+      tags: [Datasets]
+      operationId: getDataQualityReport
+      responses:
+        "200":
+          description: Quality report
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DataQualityReport"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/transformations:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+    post:
+      tags: [Datasets]
+      operationId: createTransformation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TransformationCreate"}
+      responses:
+        "202":
+          description: Transformation accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AcceptedJob"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/analytics/summary:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+    get:
+      tags: [Analytics]
+      operationId: getAnalyticsSummary
+      responses:
+        "200":
+          description: Descriptive summary
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AnalyticsSummary"}
+
+  /dataset-versions/{versionId}/analytics/series:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
+      - name: resolution
+        in: query
+        schema:
+          type: string
+          enum: [hour, day, week]
+          default: hour
+      - name: max_points
+        in: query
+        schema:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 2000
+    get:
+      tags: [Analytics]
+      operationId: getEnergySeries
+      responses:
+        "200":
+          description: Bounded time series
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnergySeries"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /algorithms:
+    get:
+      tags: [Experiments]
+      operationId: listAlgorithms
+      responses:
+        "200":
+          description: Supported algorithms
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/AlgorithmDescriptor"}
+
+  /experiments:
+    get:
+      tags: [Experiments]
+      operationId: listExperiments
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PageSize"}
+      responses:
+        "200":
+          description: Experiment page
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExperimentPage"}
+    post:
+      tags: [Experiments]
+      operationId: createExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ExperimentCreate"}
+      responses:
+        "202":
+          description: Experiment accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AcceptedExperiment"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /experiments/{experimentId}:
+    parameters:
+      - {$ref: "#/components/parameters/ExperimentId"}
+    get:
+      tags: [Experiments]
+      operationId: getExperiment
+      responses:
+        "200":
+          description: Experiment details
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Experiment"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /experiments/{experimentId}/comparison:
+    parameters:
+      - {$ref: "#/components/parameters/ExperimentId"}
+    get:
+      tags: [Experiments]
+      operationId: getExperimentComparison
+      responses:
+        "200":
+          description: Comparison on identical rows
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExperimentComparison"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /experiments/{experimentId}/cancel:
+    parameters:
+      - {$ref: "#/components/parameters/ExperimentId"}
+    post:
+      tags: [Experiments]
+      operationId: cancelExperiment
+      responses:
+        "202":
+          description: Cancellation requested
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AcceptedJob"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /forecasts:
+    get:
+      tags: [Forecasts]
+      operationId: listForecasts
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PageSize"}
+      responses:
+        "200":
+          description: Forecast page
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ForecastPage"}
+    post:
+      tags: [Forecasts]
+      operationId: createForecast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ForecastCreate"}
+      responses:
+        "201":
+          description: Forecast created synchronously
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Forecast"}
+        "202":
+          description: Forecast job accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AcceptedJob"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /forecasts/{forecastId}:
+    parameters:
+      - {$ref: "#/components/parameters/ForecastId"}
+    get:
+      tags: [Forecasts]
+      operationId: getForecast
+      responses:
+        "200":
+          description: Forecast
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Forecast"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /forecasts/{forecastId}/export:
+    parameters:
+      - {$ref: "#/components/parameters/ForecastId"}
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [csv, json]
+    get:
+      tags: [Forecasts]
+      operationId: exportForecast
+      responses:
+        "200":
+          description: Forecast export
+          content:
+            text/csv:
+              schema: {type: string, format: binary}
+            application/json:
+              schema: {type: object}
+
+  /jobs/{jobId}:
+    parameters:
+      - {$ref: "#/components/parameters/JobId"}
+    get:
+      tags: [Jobs]
+      operationId: getJob
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Job"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /jobs/{jobId}/cancel:
+    parameters:
+      - {$ref: "#/components/parameters/JobId"}
+    post:
+      tags: [Jobs]
+      operationId: cancelJob
+      responses:
+        "202":
+          description: Cancellation requested
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Job"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /jobs/{jobId}/retry:
+    parameters:
+      - {$ref: "#/components/parameters/JobId"}
+    post:
+      tags: [Jobs]
+      operationId: retryJob
+      responses:
+        "202":
+          description: Retry queued
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Job"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+components:
+  parameters:
+    DatasetId:
+      name: datasetId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    VersionId:
+      name: versionId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ExperimentId:
+      name: experimentId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ForecastId:
+      name: forecastId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    PageSize:
+      name: page_size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    From:
+      name: from
+      in: query
+      schema: {type: string, format: date-time}
+    To:
+      name: to
+      in: query
+      schema: {type: string, format: date-time}
+
+  responses:
+    Problem:
+      description: Problem Details
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ok, degraded]}
+        checks:
+          type: object
+          additionalProperties: {type: string}
+
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: {type: string, format: uri-reference}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        instance: {type: string, format: uri-reference}
+        code: {type: string}
+        request_id: {type: string}
+
+    PageMeta:
+      type: object
+      required: [page, page_size, total]
+      properties:
+        page: {type: integer}
+        page_size: {type: integer}
+        total: {type: integer}
+
+    DatasetCreate:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 160}
+        description: {type: string, maxLength: 2000}
+
+    DatasetUpdate:
+      type: object
+      properties:
+        name: {type: string, minLength: 1, maxLength: 160}
+        description: {type: string, maxLength: 2000}
+
+    Dataset:
+      type: object
+      required: [id, name, version_count, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        version_count: {type: integer}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+
+    DatasetPage:
+      allOf:
+        - {$ref: "#/components/schemas/PageMeta"}
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: "#/components/schemas/Dataset"}
+
+    DatasetImportForm:
+      type: object
+      required: [file, import_profile]
+      properties:
+        file: {type: string, format: binary}
+        import_profile: {type: string, enum: [uci, generic_csv]}
+        delimiter: {type: string, maxLength: 1}
+        decimal_separator: {type: string, enum: [".", ","]}
+        timestamp_column: {type: string}
+        timestamp_format: {type: string}
+        timestamp_semantics: {type: string, enum: [interval_start, interval_end]}
+        timezone: {type: string}
+        energy_column: {type: string}
+        power_column: {type: string}
+        unit: {type: string, enum: [kwh, wh, kw, w]}
+        duplicate_policy:
+          type: string
+          enum: [reject, keep_first, keep_last, mean]
+
+    AcceptedJob:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id: {type: string, format: uuid}
+        status: {type: string, const: queued}
+        resource_id: {type: string, format: uuid}
+
+    DatasetImport:
+      type: object
+      required: [id, dataset_id, status, job_id, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        dataset_id: {type: string, format: uuid}
+        dataset_version_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        status: {type: string}
+        preview: {type: object}
+        detected_format: {type: object}
+        created_at: {type: string, format: date-time}
+
+    DatasetVersion:
+      type: object
+      required: [id, dataset_id, version_no, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        dataset_id: {type: string, format: uuid}
+        parent_version_id: {type: string, format: uuid}
+        version_no: {type: integer}
+        status: {type: string}
+        source_sha256: {type: string, pattern: "^[0-9a-f]{64}$"}
+        timezone_context: {type: string}
+        interval_seconds: {type: integer}
+        row_count: {type: integer}
+        valid_row_count: {type: integer}
+        min_timestamp: {type: string, format: date-time}
+        max_timestamp: {type: string, format: date-time}
+        quality_policy: {type: object}
+        transformation_manifest: {type: object}
+        created_at: {type: string, format: date-time}
+
+    DataQualityReport:
+      type: object
+      required:
+        [dataset_version_id, total_rows, missing_values, exact_duplicates,
+         conflicting_duplicates, gap_count, invalid_values]
+      properties:
+        dataset_version_id: {type: string, format: uuid}
+        total_rows: {type: integer}
+        missing_values: {type: integer}
+        exact_duplicates: {type: integer}
+        conflicting_duplicates: {type: integer}
+        gap_count: {type: integer}
+        invalid_values: {type: integer}
+        coverage_summary: {type: object}
+        examples:
+          type: array
+          items: {type: object}
+
+    TransformationCreate:
+      type: object
+      required: [short_gap_limit_minutes, minimum_hour_coverage]
+      properties:
+        short_gap_limit_minutes:
+          type: integer
+          minimum: 0
+          maximum: 5
+          default: 5
+        minimum_hour_coverage:
+          type: number
+          minimum: 0.8
+          maximum: 1
+          default: 0.9
+        include_statuses:
+          type: array
+          items:
+            type: string
+            enum: [complete, imputed_short_gap, valid_partial]
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        count: {type: integer}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        mean_energy_kwh: {type: number}
+        median_energy_kwh: {type: number}
+        min_energy_kwh: {type: number}
+        max_energy_kwh: {type: number}
+        total_energy_kwh: {type: number}
+        missing_hours: {type: integer}
+
+    EnergyPoint:
+      type: object
+      required: [timestamp, energy_kwh]
+      properties:
+        timestamp: {type: string, format: date-time}
+        energy_kwh: {type: number}
+        quality_status: {type: string}
+
+    EnergySeries:
+      type: object
+      required: [resolution, points]
+      properties:
+        resolution: {type: string}
+        points:
+          type: array
+          items: {$ref: "#/components/schemas/EnergyPoint"}
+
+    AlgorithmDescriptor:
+      type: object
+      required: [type, display_name, supports_weather]
+      properties:
+        type:
+          type: string
+          enum:
+            [seasonal_naive_24, seasonal_naive_168, ridge,
+             random_forest, hist_gradient_boosting]
+        display_name: {type: string}
+        supports_weather: {type: boolean}
+        default_search_space: {type: object}
+
+    AlgorithmSelection:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string}
+        search_space:
+          oneOf:
+            - type: string
+              const: default
+            - type: object
+
+    ExperimentCreate:
+      type: object
+      required:
+        [dataset_version_id, name, weather_mode, algorithms, feature_set,
+         split_definition, selection_rule]
+      properties:
+        dataset_version_id: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 160}
+        weather_mode: {type: string, enum: [W0, W1]}
+        algorithms:
+          type: array
+          minItems: 1
+          items: {$ref: "#/components/schemas/AlgorithmSelection"}
+        feature_set: {type: string, enum: [base_v1, base_weather_v1]}
+        split_definition:
+          type: string
+          const: uci_2009_quarters_2010_test_v1
+        selection_rule:
+          type: string
+          const: selection_v1
+
+    AcceptedExperiment:
+      type: object
+      required: [experiment_id, job_id, status]
+      properties:
+        experiment_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        status: {type: string, const: queued}
+
+    MetricSet:
+      type: object
+      properties:
+        mae: {type: number, minimum: 0}
+        rmse: {type: number, minimum: 0}
+        smape: {type: number, minimum: 0}
+
+    ModelRun:
+      type: object
+      required: [id, algorithm, status, random_seed]
+      properties:
+        id: {type: string, format: uuid}
+        algorithm: {type: string}
+        status: {type: string}
+        hyperparameters: {type: object}
+        random_seed: {type: integer}
+        cv_metrics: {$ref: "#/components/schemas/MetricSet"}
+        final_test_metrics: {$ref: "#/components/schemas/MetricSet"}
+        std_cv_mae: {type: number, minimum: 0}
+        train_seconds: {type: number, minimum: 0}
+        predict_ms_median: {type: number, minimum: 0}
+        artifact_size_bytes: {type: integer, minimum: 0}
+        is_recommended: {type: boolean}
+
+    Experiment:
+      type: object
+      required:
+        [id, dataset_version_id, name, status, weather_mode, forecast_horizon, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        dataset_version_id: {type: string, format: uuid}
+        name: {type: string}
+        status: {type: string}
+        weather_mode: {type: string, enum: [W0, W1]}
+        forecast_horizon: {type: integer, const: 24}
+        feature_schema_version: {type: string}
+        split_definition: {type: object}
+        environment_manifest: {type: object}
+        model_runs:
+          type: array
+          items: {$ref: "#/components/schemas/ModelRun"}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+
+    ExperimentPage:
+      allOf:
+        - {$ref: "#/components/schemas/PageMeta"}
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: "#/components/schemas/Experiment"}
+
+    ExperimentComparison:
+      type: object
+      required: [experiment_id, evaluation_rows, models]
+      properties:
+        experiment_id: {type: string, format: uuid}
+        evaluation_rows: {type: integer}
+        models:
+          type: array
+          items: {$ref: "#/components/schemas/ModelRun"}
+        horizon_metrics:
+          type: array
+          items:
+            type: object
+            required: [model_run_id, horizon, mae, rmse, smape]
+            properties:
+              model_run_id: {type: string, format: uuid}
+              horizon: {type: integer, minimum: 1, maximum: 24}
+              mae: {type: number, minimum: 0}
+              rmse: {type: number, minimum: 0}
+              smape: {type: number, minimum: 0}
+
+    ForecastCreate:
+      type: object
+      required: [model_run_id, dataset_version_id]
+      properties:
+        model_run_id: {type: string, format: uuid}
+        dataset_version_id: {type: string, format: uuid}
+        origin: {type: string, format: date-time}
+
+    ForecastPoint:
+      type: object
+      required: [horizon, target_time, predicted_energy_kwh]
+      properties:
+        horizon: {type: integer, minimum: 1, maximum: 24}
+        target_time: {type: string, format: date-time}
+        predicted_energy_kwh: {type: number, minimum: 0}
+        actual_energy_kwh: {type: number, minimum: 0}
+
+    Forecast:
+      type: object
+      required:
+        [id, model_run_id, dataset_version_id, origin, status, points, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        model_run_id: {type: string, format: uuid}
+        dataset_version_id: {type: string, format: uuid}
+        origin: {type: string, format: date-time}
+        status: {type: string}
+        total_energy_kwh: {type: number, minimum: 0}
+        points:
+          type: array
+          minItems: 24
+          maxItems: 24
+          items: {$ref: "#/components/schemas/ForecastPoint"}
+        created_at: {type: string, format: date-time}
+
+    ForecastPage:
+      allOf:
+        - {$ref: "#/components/schemas/PageMeta"}
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: "#/components/schemas/Forecast"}
+
+    Job:
+      type: object
+      required: [id, job_type, status, progress_pct, attempt, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        job_type: {type: string}
+        status:
+          type: string
+          enum:
+            [queued, running, cancel_requested, cancelled,
+             succeeded, failed, stale]
+        progress_pct: {type: integer, minimum: 0, maximum: 100}
+        attempt: {type: integer}
+        max_attempts: {type: integer}
+        resource_id: {type: string, format: uuid}
+        error_code: {type: string}
+        error_detail: {type: string}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        heartbeat_at: {type: string, format: date-time}

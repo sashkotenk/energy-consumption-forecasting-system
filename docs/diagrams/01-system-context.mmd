@@ -1,0 +1,11 @@
+flowchart LR
+    user["Person: Energy analyst<br/>Imports data, runs experiments, reviews forecasts"]
+    system["Software System: EnergyForecast<br/>Energy data analysis and 24-hour forecasting"]
+    uci["External System: UCI Repository<br/>Control dataset source"]
+    weather["External System: Historical Weather API / ERA5-Land<br/>Optional W1 features"]
+    files["External Resource: Local files<br/>CSV input and exports"]
+
+    user -->|"Uses through browser"| system
+    system -->|"Imports control data"| uci
+    system -->|"Optional hourly reanalysis"| weather
+    system <-->|"Reads/writes controlled files"| files

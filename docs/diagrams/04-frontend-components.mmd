@@ -1,0 +1,36 @@
+flowchart TB
+    app["App Shell + Router"]
+    pages["Pages"]
+    dashboard["Dashboard"]
+    importPage["Import Wizard"]
+    qualityPage["Data Quality"]
+    analysisPage["Analysis"]
+    experimentPage["Experiment Builder/Details"]
+    forecastPage["Forecasts"]
+    widgets["Domain Widgets"]
+    charts["ECharts adapters"]
+    forms["React Hook Form + Zod"]
+    query["TanStack Query"]
+    sdk["Generated OpenAPI SDK"]
+    ui["Shared UI"]
+    api["FastAPI API"]
+
+    app --> pages
+    pages --> dashboard
+    pages --> importPage
+    pages --> qualityPage
+    pages --> analysisPage
+    pages --> experimentPage
+    pages --> forecastPage
+    dashboard --> widgets
+    qualityPage --> widgets
+    analysisPage --> widgets
+    experimentPage --> widgets
+    forecastPage --> widgets
+    widgets --> charts
+    importPage --> forms
+    experimentPage --> forms
+    pages --> query
+    query --> sdk
+    sdk --> api
+    pages --> ui

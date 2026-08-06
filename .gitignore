@@ -1,0 +1,71 @@
+
+# Private coursework / AI-assistant materials must never be committed
+/AGENTS.md
+/prompts/
+/checklists/
+/Усі промпти для Codex.md
+/Пункт плану *.md
+/План виконання*.md
+/Методичні*.pdf
+/Рекомендації до написання курсової роботи*.md
+/codex-workflow.md
+/implementation-board.csv
+/implementation-log-template.md
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+.vite/
+playwright-report/
+test-results/
+
+# Data, databases and generated artifacts
+data/raw/
+data/interim/
+data/processed/
+uploads/
+artifacts/
+models/
+exports/
+*.joblib
+*.pkl
+*.pickle
+*.parquet
+*.db
+*.sqlite*
+postgres-data/
+timescale-data/
+
+# Containers and local runtime
+*.log
+.tmp/
+tmp/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

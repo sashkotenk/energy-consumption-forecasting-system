@@ -1,0 +1,25 @@
+sequenceDiagram
+    actor U as User
+    participant W as React
+    participant A as FastAPI
+    participant D as PostgreSQL
+    participant B as Worker
+    participant F as FeaturePipeline
+    participant M as ModelRegistry
+    participant S as ArtifactStore
+
+    U->>W: Configure and start experiment
+    W->>A: POST experiment
+    A->>D: immutable config + job
+    A-->>W: 202 Accepted
+    B->>D: claim job
+    B->>F: create leakage-safe matrices
+    loop algorithms and folds
+        B->>M: fit and predict
+        B->>D: fold/horizon metrics
+    end
+    B->>M: final fit and one-time final test
+    B->>S: model bundle and manifests
+    B->>D: recommendation and completed state
+    W->>A: poll details
+    A-->>W: metrics and artifacts

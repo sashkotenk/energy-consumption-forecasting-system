@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor U as User
+    participant W as React
+    participant A as FastAPI
+    participant S as ArtifactStore
+    participant D as PostgreSQL
+    participant B as Worker
+
+    U->>W: Upload CSV and mapping
+    W->>A: POST multipart import
+    A->>S: stream staging file + checksum
+    A->>D: create import and queued job
+    A-->>W: 202 Accepted
+    B->>D: claim with SKIP LOCKED
+    loop file chunks
+        B->>S: read chunk
+        B->>D: batch insert
+        B->>D: progress and heartbeat
+    end
+    B->>D: quality report and terminal state
+    W->>A: poll job/import
+    A-->>W: completed version

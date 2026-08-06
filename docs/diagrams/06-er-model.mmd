@@ -1,0 +1,20 @@
+erDiagram
+    DATASETS ||--o{ DATASET_VERSIONS : has
+    DATASET_VERSIONS ||--o{ RAW_MEASUREMENTS : contains
+    DATASET_VERSIONS ||--o{ HOURLY_OBSERVATIONS : derives
+    DATASET_VERSIONS ||--o{ DATA_QUALITY_ISSUES : reports
+    ARTIFACTS ||--o{ DATASET_VERSIONS : source
+    DATASETS ||--o{ DATASET_IMPORTS : imports
+    JOBS ||--o| DATASET_IMPORTS : executes
+    DATASET_VERSIONS ||--o{ TRANSFORMATION_RUNS : source
+    JOBS ||--o| TRANSFORMATION_RUNS : executes
+    DATASET_VERSIONS ||--o{ EXPERIMENTS : used_by
+    JOBS ||--o| EXPERIMENTS : executes
+    EXPERIMENTS ||--o{ MODEL_RUNS : contains
+    MODEL_RUNS ||--o{ FOLD_METRICS : has
+    MODEL_RUNS ||--o{ HORIZON_METRICS : has
+    ARTIFACTS ||--o{ MODEL_RUNS : stores
+    MODEL_RUNS ||--o{ FORECASTS : produces
+    DATASET_VERSIONS ||--o{ FORECASTS : based_on
+    FORECASTS ||--|{ FORECAST_POINTS : contains
+    WEATHER_LOCATIONS ||--o{ WEATHER_OBSERVATIONS : has

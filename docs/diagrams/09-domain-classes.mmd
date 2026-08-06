@@ -1,0 +1,72 @@
+classDiagram
+    class Dataset {
+      +UUID id
+      +string name
+      +addVersion()
+    }
+    class DatasetVersion {
+      +UUID id
+      +int versionNo
+      +VersionStatus status
+      +markReady()
+      +fail()
+    }
+    class Job {
+      +UUID id
+      +JobStatus status
+      +int progress
+      +claim()
+      +requestCancel()
+      +complete()
+      +fail()
+    }
+    class Experiment {
+      +UUID id
+      +ExperimentStatus status
+      +WeatherMode weatherMode
+      +queue()
+      +start()
+      +complete()
+    }
+    class ModelRun {
+      +UUID id
+      +Algorithm algorithm
+      +dict hyperparameters
+      +bool recommended
+    }
+    class Forecast {
+      +UUID id
+      +datetime origin
+    }
+    class ForecastPoint {
+      +int horizon
+      +datetime targetTime
+      +float predictedEnergyKwh
+    }
+    class Artifact {
+      +UUID id
+      +string storageKey
+      +string sha256
+    }
+    class ForecastingModel {
+      <<interface>>
+      +fit()
+      +predict()
+      +save()
+    }
+    class FeatureBuilder {
+      <<interface>>
+      +buildTrainingMatrix()
+      +buildOrigin()
+    }
+
+    Dataset "1" --> "*" DatasetVersion
+    DatasetVersion "1" --> "*" Experiment
+    Experiment "1" --> "*" ModelRun
+    ModelRun "1" --> "*" Forecast
+    Forecast "1" --> "24" ForecastPoint
+    DatasetVersion --> Artifact
+    ModelRun --> Artifact
+    Experiment --> Job
+    ModelRun ..> ForecastingModel
+    Experiment ..> FeatureBuilder

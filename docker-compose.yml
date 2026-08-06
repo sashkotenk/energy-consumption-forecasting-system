@@ -1,0 +1,6 @@
+
+name: energyforecast
+
+# Services are implemented and pinned during the infrastructure tasks.
+# Keeping an empty valid baseline avoids inventing containers before TASK-01/TASK-03.
+services: {}

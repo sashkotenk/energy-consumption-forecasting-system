@@ -1,0 +1,27 @@
+flowchart LR
+    browser["User Browser"]
+
+    subgraph host["Docker Host / VPS"]
+      subgraph edge["Edge network"]
+        nginx["Nginx"]
+        web["React static container"]
+        api["FastAPI API"]
+      end
+      subgraph backend["Backend network"]
+        worker["Python Worker"]
+        migrate["Alembic one-shot"]
+        db[("TimescaleDB/PostgreSQL")]
+      end
+      volume[("Artifact volume")]
+      dbvol[("PostgreSQL volume")]
+    end
+
+    browser -->|"HTTPS"| nginx
+    nginx --> web
+    nginx --> api
+    api --> db
+    worker --> db
+    migrate --> db
+    api --> volume
+    worker --> volume
+    db --> dbvol

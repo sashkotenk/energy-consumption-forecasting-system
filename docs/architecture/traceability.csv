@@ -1,0 +1,16 @@
+requirement,component,data,api,test
+FR-01,Ingestion and Artifact Service,artifacts jobs raw_measurements,dataset imports,parser integration E2E
+FR-02,Data Quality Engine,data_quality_issues,quality report,unit integration
+FR-03,Transformation Pipeline,hourly_observations,transformations,unit database
+FR-04,Analytics Query,hourly_observations,analytics endpoints,API component
+FR-05,Experiment Service and Worker,experiments model_runs,experiments,ML integration
+FR-06,Comparison Query,fold_metrics horizon_metrics,comparison,API UI
+FR-07,Forecast Service,forecasts forecast_points,forecasts,ML E2E
+FR-08,Export and Artifact Service,artifacts,exports,security E2E
+FR-09,Catalog and history queries,metadata tables,list endpoints,integration
+FR-10,FastAPI and OpenAPI,none,/api/v1,contract
+NFR-02,Manifests and checksums,JSONB and SHA-256,detail endpoints,reproducibility
+NFR-04,Module boundaries,none,none,architecture import checks
+NFR-05,Docker Compose,volumes,health,compose smoke
+NFR-06,Upload and error handling,generated storage keys,limits and Problem Details,security
+NFR-07,React pages and widgets,none,query endpoints,component E2E

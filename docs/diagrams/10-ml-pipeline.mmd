@@ -1,0 +1,19 @@
+flowchart LR
+    raw["Immutable raw artifact"]
+    parse["Chunked parse"]
+    normalized["Normalized raw hypertable"]
+    quality["Quality engine"]
+    transform["Versioned cleaning + hourly aggregation"]
+    hourly["Hourly hypertable"]
+    features["Feature builder"]
+    guard["Leakage guard"]
+    split["Chronological folds"]
+    tune["Algorithm tuning"]
+    select["Selection rule"]
+    fit["Final fit"]
+    test["One-time final test"]
+    bundle["Verified model bundle"]
+    forecast["24-hour forecast"]
+
+    raw --> parse --> normalized --> quality --> transform --> hourly
+    hourly --> features --> guard --> split --> tune --> select --> fit --> test --> bundle --> forecast

@@ -1,0 +1,47 @@
+flowchart TB
+    router["API Routers + Pydantic"]
+    usecases["Application Use Cases"]
+    datasets["Dataset Catalog"]
+    ingest["Ingestion"]
+    quality["Quality Engine"]
+    transform["Transformation Pipeline"]
+    analytics["Analytics Query"]
+    experiments["Experiment Service"]
+    features["Feature Pipeline"]
+    models["Model Registry"]
+    forecasts["Forecast Service"]
+    jobs["Job Queue"]
+    artifacts["Artifact Service"]
+    weather["Weather Adapter"]
+    repos["SQLAlchemy Repositories"]
+    db[("PostgreSQL/TimescaleDB")]
+    fs[("Artifact Volume")]
+    ext["Weather API"]
+
+    router --> usecases
+    usecases --> datasets
+    usecases --> ingest
+    usecases --> quality
+    usecases --> transform
+    usecases --> analytics
+    usecases --> experiments
+    usecases --> forecasts
+    ingest --> artifacts
+    ingest --> quality
+    transform --> quality
+    experiments --> features
+    experiments --> models
+    forecasts --> features
+    forecasts --> models
+    usecases --> jobs
+    datasets --> repos
+    ingest --> repos
+    quality --> repos
+    transform --> repos
+    analytics --> repos
+    experiments --> repos
+    forecasts --> repos
+    jobs --> repos
+    artifacts --> fs
+    weather --> ext
+    repos --> db

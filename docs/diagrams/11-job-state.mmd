@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> queued
+    queued --> running: claim
+    queued --> cancel_requested: cancel
+    cancel_requested --> cancelled: worker acknowledgement
+    running --> cancel_requested: cancel
+    running --> succeeded: complete
+    running --> failed: error
+    running --> stale: heartbeat timeout
+    failed --> queued: retry allowed
+    stale --> queued: recover
+    stale --> failed: attempts exhausted
+    cancelled --> [*]
+    succeeded --> [*]
+    failed --> [*]

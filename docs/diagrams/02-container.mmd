@@ -1,0 +1,22 @@
+flowchart LR
+    user["Person: Energy analyst"]
+    weather["External: Weather API"]
+
+    subgraph system["EnergyForecast"]
+      nginx["Container: Nginx<br/>Reverse proxy, limits, static delivery"]
+      web["Container: React SPA<br/>TypeScript, ECharts"]
+      api["Container: FastAPI API<br/>REST/OpenAPI"]
+      worker["Container: Background Worker<br/>Data and ML jobs"]
+      db[("Container: PostgreSQL + TimescaleDB")]
+      store[("Container: Artifact Store<br/>Local persistent volume")]
+    end
+
+    user -->|"HTTPS"| nginx
+    nginx -->|"/"| web
+    nginx -->|"/api/v1"| api
+    web -->|"JSON, CSV, PNG"| api
+    api -->|"SQL"| db
+    api -->|"controlled stream"| store
+    worker -->|"claim jobs; persist results"| db
+    worker -->|"raw/model/export artifacts"| store
+    worker -->|"optional HTTPS"| weather
