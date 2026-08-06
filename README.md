@@ -1,93 +1,102 @@
-## 🌐 English (EN)
 # EnergyForecast
 
-**EnergyForecast** is a full-stack software system for importing, validating, analysing and forecasting hourly electricity consumption with machine-learning methods.
+EnergyForecast is a course-project software system for analysing hourly electricity consumption and producing a direct 24-hour forecast with machine-learning methods.
 
-This repository is the implementation repository for the course project **“A Software System for Energy Consumption Analysis and Forecasting Based on Machine Learning Methods.”**
+> Українською: EnergyForecast — програмна система для аналізу погодинного споживання електроенергії та формування прямого прогнозу на наступні 24 години методами машинного навчання.
 
-## Planned capabilities
+## Current status
 
-- import the UCI household electricity dataset and compatible user CSV files;
-- validate, clean and aggregate time-series measurements to hourly energy consumption;
-- analyse data quality and consumption patterns;
-- train and compare Seasonal Naive, Ridge, Random Forest and Histogram Gradient Boosting models;
-- produce a direct 24-hour forecast;
-- expose a FastAPI REST API and a React/TypeScript user interface;
-- store time-series data in PostgreSQL with TimescaleDB;
-- run locally through Docker Compose.
+TASK-01 establishes the monorepository and continuous-integration baseline:
 
-## Technology baseline
+- an installable Python 3.13 `src`-layout package managed by uv;
+- a Vite React TypeScript application managed by npm;
+- linting, formatting, type checking, unit smoke tests, and production builds;
+- separate cached backend and frontend GitHub Actions jobs.
 
-- **Frontend:** React, TypeScript, Vite, TanStack Query, Apache ECharts
-- **Backend:** Python, FastAPI, Pydantic, SQLAlchemy, Alembic
-- **Data and ML:** Pandas, NumPy, scikit-learn, joblib
-- **Database:** PostgreSQL, TimescaleDB
-- **Infrastructure:** Docker, Docker Compose, Nginx, GitHub Actions
+Business capabilities, API routes, database migrations, background workers, and ML pipelines are intentionally deferred to later tasks. The files under `docs/api`, `docs/database`, `docs/diagrams`, and `docs/sad` remain design-time baselines until their corresponding features are implemented.
 
-## Repository status
+## Toolchain
 
-The repository currently contains the architecture and contract baseline from the design stage. Code, tests and deployment configuration are added incrementally. Design-time files must be updated when implementation decisions change.
+| Area | Pinned baseline |
+|---|---|
+| Python | 3.13.14 |
+| Python project manager | uv 0.12.2 |
+| Node.js | 24.18.0 LTS |
+| Frontend package manager | npm with committed `package-lock.json` |
 
-## Technical documentation
+Resolved application and development dependency versions are recorded in [`docs/implementation-log.md`](docs/implementation-log.md).
 
-- `docs/api/openapi-design.yaml` — design-time OpenAPI contract
-- `docs/database/schema-design.sql` — database schema baseline
-- `docs/diagrams/` — C4, UML, sequence, ER and deployment diagrams
-- `docs/sad/SAD_draft_v0.1.md` — English Software Architecture Document draft
-- `docs/architecture/traceability.csv` — requirements traceability matrix
+## Repository layout
 
-## Private development materials
+```text
+backend/                 Python package and backend tests
+frontend/                React application and frontend tests
+infrastructure/          reserved for deployment assets
+tests/                   reserved for repository-level system tests
+docs/                    versioned product technical documentation
+.github/workflows/       continuous integration
+scripts/                 repository verification helpers
+```
 
-Prompts, Codex instructions, coursework planning documents and implementation checklists are intentionally stored outside this Git repository in the sibling local directory `../EnergyForecast-private/`.
+Private prompts, coursework planning files, raw datasets, uploaded files, generated models, local artifacts, and secrets do not belong in this repository.
+
+## Backend development
+
+Install [uv](https://docs.astral.sh/uv/) and run the following commands from `backend/`:
+
+```bash
+uv sync --all-groups
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src tests
+uv run pytest
+```
+
+The committed `.python-version` causes uv to provision Python 3.13.14 when it is not already installed.
+
+## Frontend development
+
+Use the Node version in `.nvmrc`, then run the following commands from `frontend/`:
+
+```bash
+npm ci
+npm run dev
+```
+
+Frontend verification:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test -- --run
+npm run build
+```
+
+The starter interface and user-facing text are Ukrainian, while code and technical documentation use English.
+
+## Verify the complete baseline
+
+On PowerShell, run from the repository root:
+
+```powershell
+./scripts/verify.ps1
+```
+
+The script runs the backend and frontend checks and validates `docker-compose.yml`. The Compose file is intentionally an empty valid baseline in TASK-01; runnable services are added by later infrastructure tasks.
+
+## Architecture and contracts
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — implemented architecture snapshot;
+- [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design-time OpenAPI contract;
+- [`docs/database/schema-design.sql`](docs/database/schema-design.sql) — design-time PostgreSQL/TimescaleDB schema;
+- [`docs/diagrams/`](docs/diagrams/) — C4, UML, sequence, ER, deployment, and ML diagrams;
+- [`docs/sad/SAD_draft_v0.1.md`](docs/sad/SAD_draft_v0.1.md) — draft Software Architecture Document;
+- [`docs/architecture/traceability.csv`](docs/architecture/traceability.csv) — requirement traceability baseline.
+
+## Environment configuration
+
+Copy `.env.example` to `.env` only when a later runtime task requires it. Never commit `.env` or real credentials.
 
 ## License
 
-MIT License. See `LICENSE`.
-
-
-## 🌐 Українська (UK)
-# EnergyForecast
-
-**EnergyForecast** — це повнофункціональна програмна система для імпорту, перевірки, аналізу та прогнозування погодинного споживання електроенергії за допомогою методів машинного навчання.
-
-Цей репозиторій містить реалізацію курсового проєкту **«Програмна система аналізу та прогнозування енергоспоживання на основі методів машинного навчання»**.
-
-## Заплановані можливості
-
-- імпорт набору даних UCI Household Electricity Consumption та сумісних CSV-файлів користувачів;
-- перевірка, очищення й агрегація часових рядів до погодинного споживання електроенергії;
-- аналіз якості даних і закономірностей енергоспоживання;
-- навчання та порівняння моделей Seasonal Naive, Ridge, Random Forest і Histogram Gradient Boosting;
-- формування прямого прогнозу на 24 години;
-- надання REST API на основі FastAPI та користувацького інтерфейсу на React і TypeScript;
-- зберігання часових рядів у PostgreSQL із використанням TimescaleDB;
-- локальний запуск системи через Docker Compose.
-
-## Базовий набір технологій
-
-- **Frontend:** React, TypeScript, Vite, TanStack Query, Apache ECharts
-- **Backend:** Python, FastAPI, Pydantic, SQLAlchemy, Alembic
-- **Дані та машинне навчання:** Pandas, NumPy, scikit-learn, joblib
-- **База даних:** PostgreSQL, TimescaleDB
-- **Інфраструктура:** Docker, Docker Compose, Nginx, GitHub Actions
-
-## Стан репозиторію
-
-Наразі репозиторій містить базову архітектуру та контракти, створені на етапі проєктування. Програмний код, тести та конфігурації розгортання додаються поступово.
-
-Файли, створені на етапі проєктування, повинні оновлюватися у разі зміни рішень під час реалізації системи.
-
-## Технічна документація
-
-- `docs/api/openapi-design.yaml` — проєктний контракт OpenAPI;
-- `docs/database/schema-design.sql` — базова схема бази даних;
-- `docs/diagrams/` — діаграми C4, UML, послідовностей, ER-діаграми та діаграми розгортання;
-- `docs/sad/SAD_draft_v0.1.md` — чернетка документа Software Architecture Document англійською мовою;
-- `docs/architecture/traceability.csv` — матриця трасування вимог.
-
-## Приватні матеріали розробки
-
-Промпти, інструкції для Codex, документи з планування курсової роботи та контрольні списки реалізації навмисно зберігаються поза цим Git-репозиторієм у сусідній локальній директорії:
-
-```text
-../EnergyForecast-private/
+This project is licensed under the [MIT License](LICENSE).

@@ -32,6 +32,9 @@ coverage.xml
 htmlcov/
 .venv/
 venv/
+*.egg-info/
+build/
+site/
 
 # Node / frontend
 node_modules/
@@ -40,6 +43,7 @@ coverage/
 .vite/
 playwright-report/
 test-results/
+.eslintcache
 
 # Data, databases and generated artifacts
 data/raw/
@@ -62,6 +66,9 @@ timescale-data/
 *.log
 .tmp/
 tmp/
+
+# Tool caches
+.uv-cache/
 
 # IDE and OS
 .idea/

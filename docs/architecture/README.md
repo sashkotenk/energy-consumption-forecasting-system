@@ -3,6 +3,8 @@
 
 This directory contains technical product documentation that is safe to version with the source code.
 
+The root `ARCHITECTURE.md` is the concise snapshot of what is actually implemented. The design artifacts in this directory describe the intended system and are synchronized as implementation tasks land. Exact toolchain versions and executed verification evidence are recorded in `docs/implementation-log.md`.
+
 - `adr/` — architecture decision index and future ADRs;
 - `references/` — verified architecture and technical sources;
 - `traceability.csv` — mapping of requirements to components, data, API and tests.

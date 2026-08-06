@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.28,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "energy-forecast"
+version = "0.1.0"
+description = "Backend foundation for the EnergyForecast course project"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Oleksandr Bondarchuk" }]
+dependencies = [
+    "alembic>=1.16,<2",
+    "asyncpg>=0.30,<1",
+    "fastapi>=0.116,<1",
+    "joblib>=1.5,<2",
+    "numpy>=2.3,<2.5",
+    "pandas>=2.3,<4",
+    "pydantic>=2.11,<3",
+    "scikit-learn>=1.7,<2",
+    "sqlalchemy>=2.0,<3",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17,<2",
+    "pytest>=8.4,<10",
+    "ruff>=0.12,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/energy_forecast"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+disable_error_code = ["import-untyped"]
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
