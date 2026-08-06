@@ -184,12 +184,10 @@ CREATE TABLE ts.raw_measurements (
     quality_flags text[] NOT NULL DEFAULT '{}',
     imported_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (dataset_version_id, observed_at, source_row_number)
-);
-
-SELECT create_hypertable(
-    'ts.raw_measurements',
-    by_range('observed_at'),
-    if_not_exists => TRUE
+) WITH (
+    tsdb.hypertable,
+    tsdb.partition_column = 'observed_at',
+    tsdb.create_default_indexes = false
 );
 
 CREATE INDEX ix_raw_version_time
@@ -222,12 +220,10 @@ CREATE TABLE ts.hourly_observations (
     PRIMARY KEY (dataset_version_id, hour_start),
     CHECK (observed_samples <= expected_samples),
     CHECK (imputed_samples <= expected_samples)
-);
-
-SELECT create_hypertable(
-    'ts.hourly_observations',
-    by_range('hour_start'),
-    if_not_exists => TRUE
+) WITH (
+    tsdb.hypertable,
+    tsdb.partition_column = 'hour_start',
+    tsdb.create_default_indexes = false
 );
 
 CREATE INDEX ix_hourly_version_time
@@ -263,12 +259,10 @@ CREATE TABLE ts.weather_observations (
     source_resolution varchar(40) NOT NULL,
     retrieved_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (location_id, observed_at)
-);
-
-SELECT create_hypertable(
-    'ts.weather_observations',
-    by_range('observed_at'),
-    if_not_exists => TRUE
+) WITH (
+    tsdb.hypertable,
+    tsdb.partition_column = 'observed_at',
+    tsdb.create_default_indexes = false
 );
 
 CREATE INDEX ix_weather_location_time

@@ -1,6 +1,25 @@
 
 name: energyforecast
 
-# Services are implemented and pinned during the infrastructure tasks.
-# Keeping an empty valid baseline avoids inventing containers before TASK-01/TASK-03.
-services: {}
+services:
+  db:
+    image: timescale/timescaledb:2.28.3-pg17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-energyforecast}
+      POSTGRES_USER: ${POSTGRES_USER:-energyforecast}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-energyforecast}
+      TIMESCALEDB_TELEMETRY: "off"
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-energyforecast} -d ${POSTGRES_DB:-energyforecast}"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

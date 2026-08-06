@@ -26,13 +26,29 @@ function Assert-LastExitCode {
     }
 }
 
+Push-Location $repositoryRoot
+try {
+    docker compose -f docker-compose.yml config
+    Assert-LastExitCode -CommandName "docker compose config"
+    docker compose -f docker-compose.yml up -d db
+    Assert-LastExitCode -CommandName "docker compose up -d db"
+    Start-Sleep -Seconds 5
+}
+finally {
+    Pop-Location
+}
+$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
+$env:TEST_DATABASE_URL = $env:DATABASE_URL
+
 Push-Location (Join-Path $repositoryRoot "backend")
 try {
     Invoke-Uv -Arguments @("sync", "--all-groups")
     Invoke-Uv -Arguments @("run", "ruff", "check", ".")
     Invoke-Uv -Arguments @("run", "ruff", "format", "--check", ".")
     Invoke-Uv -Arguments @("run", "mypy", "src", "tests")
-    Invoke-Uv -Arguments @("run", "pytest")
+    Invoke-Uv -Arguments @("run", "alembic", "upgrade", "head")
+    Invoke-Uv -Arguments @("run", "alembic", "check")
+    Invoke-Uv -Arguments @("run", "pytest", "-m", "not performance")
 }
 finally {
     Pop-Location
@@ -50,15 +66,6 @@ try {
     Assert-LastExitCode -CommandName "npm run test -- --run"
     npm run build
     Assert-LastExitCode -CommandName "npm run build"
-}
-finally {
-    Pop-Location
-}
-
-Push-Location $repositoryRoot
-try {
-    docker compose -f docker-compose.yml config
-    Assert-LastExitCode -CommandName "docker compose config"
 }
 finally {
     Pop-Location

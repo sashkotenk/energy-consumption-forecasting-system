@@ -16,5 +16,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-010 | Weather integration optional | W0 remains available offline |
 | ADR-011 | Direct 24-horizon forecasting | one model façade, 24 target regressors |
 | ADR-012 | No arbitrary model import | prevent unsafe pickle/joblib loading |
+| ADR-013 | TimescaleDB 2.28 hypertable DDL | pinned runtime uses the current `CREATE TABLE ... WITH` API |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.

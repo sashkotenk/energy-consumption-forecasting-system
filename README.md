@@ -6,17 +6,24 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-02 extends the monorepository baseline with the backend process foundation:
+TASK-03 extends the process foundation with persistent database infrastructure:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
 - typed environment configuration with production startup validation;
 - FastAPI liveness/readiness routes, request IDs, JSON logs, and Problem Details errors;
+- SQLAlchemy 2.x mappings for the `app`, `ts`, and `ml` schemas;
+- Alembic migrations for all tables, constraints, indexes and TimescaleDB hypertables;
+- a pinned TimescaleDB 2.28.3 / PostgreSQL 17 Compose database;
+- explicit async session and transaction boundaries with repository integration tests;
 - separate API and placeholder worker console entrypoints;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Dataset APIs, database migrations, queue processing, artifact storage, and ML pipelines are intentionally deferred to later tasks. The implemented health routes are synchronized with `docs/api/openapi-design.yaml`; other operations in that file remain design-time contracts until their corresponding features are implemented.
+Dataset APIs, queue processing, artifact storage, and ML pipelines are intentionally deferred to later
+tasks. The implemented health and database foundations are synchronized with their repository
+contracts; other operations remain design-time contracts until their corresponding features are
+implemented.
 
 ## Toolchain
 
@@ -85,7 +92,43 @@ On PowerShell, run from the repository root:
 ./scripts/verify.ps1
 ```
 
-The script runs the backend and frontend checks and validates `docker-compose.yml`. The Compose file is intentionally an empty valid baseline in TASK-01; runnable services are added by later infrastructure tasks.
+The script starts the pinned database, applies and drift-checks migrations, runs the real TimescaleDB
+integration tests, runs the remaining backend/frontend checks, and validates `docker-compose.yml`.
+
+## Database demonstration
+
+Install Docker Desktop and uv, then run from the repository root in PowerShell:
+
+```powershell
+docker compose up -d --wait db
+Set-Location backend
+python -m uv sync --all-groups
+python -m uv run alembic upgrade head
+python -m uv run alembic check
+$env:TEST_DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
+python -m uv run pytest tests/integration/test_database_migrations.py `
+  tests/integration/test_repositories.py -v
+```
+
+To show the created schemas and hypertables:
+
+```powershell
+Set-Location ..
+docker compose exec db psql -U energyforecast -d energyforecast -c "\dn"
+docker compose exec db psql -U energyforecast -d energyforecast `
+  -c "SELECT hypertable_schema, hypertable_name FROM timescaledb_information.hypertables ORDER BY 1, 2;"
+```
+
+Start the API with the host-accessible database URL:
+
+```powershell
+Set-Location backend
+$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
+python -m uv run energy-forecast-api
+```
+
+Open `http://localhost:8000/docs` or request `http://localhost:8000/health/ready`. Stop the local
+database later with `docker compose stop db`; data remains in the named volume.
 
 ## Architecture and contracts
 

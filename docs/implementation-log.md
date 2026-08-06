@@ -166,3 +166,85 @@ test failed in the final verification gate.
 readiness failures. `docs/architecture/traceability.csv`, `ARCHITECTURE.md`, the root README and
 backend README reflect the implemented boundary. No DDL, migration, diagram or ADR changed because
 TASK-02 introduces no persistence model and follows the accepted API/worker and OpenAPI decisions.
+
+## TASK-03 — PostgreSQL, TimescaleDB and Alembic baseline
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** pinned TimescaleDB/PostgreSQL Compose service; SQLAlchemy 2.x mappings for the complete
+`app`, `ts`, and `ml` design baseline; async engine, session factory, explicit transaction context
+and dataset repository; Alembic initial migration; real-database migration and repository tests; CI
+database service and migration drift gate. Dataset APIs and business behavior remain deferred.
+
+### Database baseline
+
+| Component | Verified version |
+|---|---:|
+| Docker image | `timescale/timescaledb:2.28.3-pg17` |
+| PostgreSQL | 17.10 |
+| TimescaleDB | 2.28.3 |
+| pgcrypto | 1.3 |
+| SQLAlchemy | 2.0.51 |
+| Alembic | 1.19.0 |
+| asyncpg | 0.31.0 |
+
+The initial migration creates 17 application tables, 15 explicitly designed secondary indexes and
+three hypertables: `ts.raw_measurements`, `ts.hourly_observations`, and
+`ts.weather_observations`. Every primary or unique constraint on a hypertable includes its time
+partition column. TimescaleDB default indexes are disabled so only version-controlled indexes are
+created.
+
+### Compatibility decision and downgrade policy
+
+TimescaleDB 2.20 and newer use `CREATE TABLE ... WITH (tsdb.hypertable, ...)` for new hypertables.
+The migration and synchronized design DDL therefore replace the older `create_hypertable()` form.
+ADR-013 records this intentional compatibility correction.
+
+Production migrations are forward-only by policy. The initial downgrade is intended only for an
+empty or disposable database: it drops all application tables and the `app`, `ts`, and `ml` schemas
+but retains the shared extensions. An isolated integration test verifies
+`upgrade -> downgrade base -> upgrade`.
+
+### Verification evidence
+
+Commands were run from the locations required by the engineering instructions. The local shell did
+not expose a bare `uv` executable, so the supported `python -m uv` form was used.
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| repository root | `docker compose -f docker-compose.yml config` | exit 0; pinned db service, healthcheck, localhost-only port and named volume validated |
+| repository root | `docker compose up -d db` | exit 0; `energyforecast-db-1` running healthy on `127.0.0.1:5432` |
+| `backend` | `python -m uv sync --all-groups` | exit 0; 46 locked packages resolved and checked |
+| `backend` | `python -m uv run alembic upgrade head` | exit 0; empty database upgraded to revision `0aec62c65582` |
+| `backend` | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` | `python -m uv run ruff format --check .` | exit 0; 28 files already formatted |
+| `backend` | `python -m uv run mypy src tests` | exit 0; no issues in 24 source files |
+| `backend` | `python -m uv run pytest -m "not performance"` | exit 0; 22 collected, 22 passed, 0 failed, 0 skipped in 37.53 s |
+| `frontend` | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities |
+| `frontend` | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` | `npm run test -- --run` | exit 0; 1 file and 1 test passed |
+| `frontend` | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+| repository root | `.\scripts\verify.ps1` | exit 0; complete database, backend and frontend gate passed in 97.7 s |
+
+Clean-volume recreation was exercised with `docker compose down --volumes --remove-orphans`. Docker
+Desktop created the new volume and container but its `--wait` inspection returned a transient
+`No such container` lookup error for the just-created ID. Starting that same Compose container and
+rerunning `docker compose up -d db` succeeded (exit 0, healthy); Alembic then recreated all 17 tables
+and three hypertables from the empty volume. The final verification script avoids the affected
+`--wait` inspection path and proves readiness through the real Alembic connection.
+
+During the first combined full-suite run, three new integration tests failed because the process
+`DATABASE_URL` overrode their programmatic temporary-database URL. The Alembic environment now gives
+an explicit config attribute highest priority. The targeted rerun passed 3/3, and the subsequent
+complete gate passed 22/22; no failing test remains.
+
+### Contract and architecture impact
+
+The DDL, ADR index, traceability matrix, architecture snapshot, CI workflow and developer runbooks
+now describe the implemented persistence baseline. OpenAPI and the ER diagram did not change because
+this task implements the already accepted entity and API boundaries without adding endpoints or
+relationships.

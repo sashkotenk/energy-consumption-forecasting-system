@@ -15,3 +15,4 @@ NFR-04,Module boundaries,none,none,architecture import checks
 NFR-05,Docker Compose,volumes,future service health wiring,compose smoke
 NFR-06,Error boundary and future upload handling,generated storage keys,limits and Problem Details,API security
 NFR-07,React pages and widgets,none,query endpoints,component E2E
+NFR-08,SQLAlchemy and Alembic persistence,app ts ml schemas,none,TimescaleDB migration repository integration
