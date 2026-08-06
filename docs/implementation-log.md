@@ -309,3 +309,71 @@ risk without changing behavior. The architecture snapshot, traceability matrix, 
 runbooks and ignore rules now describe the implemented artifact boundary. OpenAPI, design DDL,
 diagrams and ADRs remain unchanged because no endpoint, database shape or accepted architecture
 decision changed.
+
+## TASK-05 — PostgreSQL job queue and worker lifecycle
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** framework-independent job states and transition validation; persistent idempotent enqueue;
+atomic PostgreSQL claim; attempt history; stable polling, cancellation and retry APIs; handler
+registry; progress and heartbeat; cooperative cancellation; bounded explicit retry; stale-worker
+recovery; and a separate worker polling process. Concrete dataset, experiment, forecast and export
+handlers remain assigned to their feature tasks.
+
+### Queue and retry contract
+
+- `SqlAlchemyJobQueue.claim_next` uses one short transaction with `FOR UPDATE SKIP LOCKED`, commits
+  ownership, and returns before handler execution starts. Every later heartbeat, progress, result,
+  cancellation or recovery operation owns a separate short transaction.
+- Workers claim only types present in their `JobHandlerRegistry`. An incomplete process therefore
+  leaves unsupported work queued rather than failing it.
+- A globally unique optional idempotency key returns the original job only when type, payload,
+  priority and retry limit match. Replay never requeues completed work; mismatched reuse returns
+  `409 idempotency_conflict`.
+- Migration `8b31f6f2d912` adds the partial idempotency index and `app.job_attempts`. Retry keeps the
+  original job ID and retains the worker, timing and error evidence for every claimed attempt.
+- Explicit retry accepts only `failed` or `stale` jobs with remaining attempt budget. Stale recovery
+  automatically requeues when budget remains and otherwise ends in `failed`. Successful and
+  cancelled jobs are terminal.
+- A queued cancellation is acknowledged without executing a handler. A running handler observes
+  cancellation through automatic heartbeat or a progress call and exits at an explicit cooperative
+  checkpoint.
+
+### Verification evidence
+
+Commands were run from the locations required by the engineering instructions. The local shell did
+not expose a bare `uv` executable, so the repository-supported `python -m uv` form was used.
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_job_state.py tests/unit/test_job_api.py tests/unit/test_config.py -q` | exit 0; 37 passed, 0 failed |
+| `backend` | `python -m uv run pytest tests/integration/test_job_queue.py tests/integration/test_worker_lifecycle.py -v` | exit 0; 5 passed, 0 failed in 45.93 s against disposable PostgreSQL databases; includes separate worker-process smoke test |
+| `backend` | `python -m uv run alembic upgrade head` | exit 0; upgraded `0aec62c65582 -> 8b31f6f2d912` on the persistent local database |
+| `backend` | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` | transient PyYAML static/runtime OpenAPI assertion | exit 0; YAML parsed and all four job paths plus `enqueueJob` operation ID aligned |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 145.3 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 48 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 43 source files |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 74 collected, 74 passed, 0 failed, 0 skipped in 97.67 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+One intermediate combined contract run inherited the command's real `DATABASE_URL` in the unit test
+that intentionally exercises an unconfigured queue. That test incorrectly reached PostgreSQL and
+reported 1 failure with 30 passes and 2 environment skips. The test now removes `DATABASE_URL`
+explicitly; its targeted rerun passed, and the subsequent complete gate passed all 74 backend tests.
+
+### Contract and architecture impact
+
+The design DDL, OpenAPI, job state/domain/ER diagrams, traceability matrix, architecture snapshot and
+runbooks now describe the runtime queue. ADR-014 records idempotency, bounded retry and immutable
+attempt-evidence policy. The additive migration creates one table, two indexes and one nullable
+column; it does not rewrite existing jobs. API clients gain `POST /jobs` and implemented
+`GET /jobs/{jobId}`, cancel and retry operations. Existing health and artifact contracts are
+unchanged.

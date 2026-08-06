@@ -393,6 +393,30 @@ paths:
             application/json:
               schema: {type: object}
 
+  /jobs:
+    post:
+      tags: [Jobs]
+      operationId: enqueueJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/JobCreate"}
+      responses:
+        "202":
+          description: Job accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Job"}
+        "200":
+          description: Idempotent replay returns the original job without requeueing it
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Job"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
+
   /jobs/{jobId}:
     parameters:
       - {$ref: "#/components/parameters/JobId"}
@@ -406,6 +430,7 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Job"}
         "404": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
 
   /jobs/{jobId}/cancel:
     parameters:
@@ -419,7 +444,9 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Job"}
+        "404": {$ref: "#/components/responses/Problem"}
         "409": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
 
   /jobs/{jobId}/retry:
     parameters:
@@ -433,7 +460,9 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Job"}
+        "404": {$ref: "#/components/responses/Problem"}
         "409": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
 
 components:
   parameters:
@@ -877,24 +906,68 @@ components:
               type: array
               items: {$ref: "#/components/schemas/Forecast"}
 
+    JobCreate:
+      type: object
+      additionalProperties: false
+      required: [job_type]
+      properties:
+        job_type:
+          type: string
+          enum:
+            [dataset_import, data_validation, data_transformation,
+             weather_import, experiment, forecast, export]
+        payload: {type: object, default: {}}
+        priority: {type: integer, minimum: -100, maximum: 100, default: 0}
+        max_attempts: {type: integer, minimum: 1, maximum: 5, default: 3}
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+
+    JobAttempt:
+      type: object
+      required: [attempt, status, worker_id, started_at]
+      properties:
+        attempt: {type: integer, minimum: 1}
+        status:
+          type: string
+          enum: [running, cancelled, succeeded, failed, stale]
+        worker_id: {type: string}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        error_code: {type: string}
+        error_detail: {type: string}
+
     Job:
       type: object
-      required: [id, job_type, status, progress_pct, attempt, created_at]
+      required:
+        [id, job_type, status, progress_pct, attempt, max_attempts,
+         created_at, updated_at, attempts]
       properties:
         id: {type: string, format: uuid}
-        job_type: {type: string}
+        job_type:
+          type: string
+          enum:
+            [dataset_import, data_validation, data_transformation,
+             weather_import, experiment, forecast, export]
         status:
           type: string
           enum:
             [queued, running, cancel_requested, cancelled,
              succeeded, failed, stale]
         progress_pct: {type: integer, minimum: 0, maximum: 100}
-        attempt: {type: integer}
-        max_attempts: {type: integer}
-        resource_id: {type: string, format: uuid}
+        attempt: {type: integer, minimum: 0}
+        max_attempts: {type: integer, minimum: 1, maximum: 5}
+        result: {type: object}
         error_code: {type: string}
         error_detail: {type: string}
         created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
         started_at: {type: string, format: date-time}
         finished_at: {type: string, format: date-time}
         heartbeat_at: {type: string, format: date-time}
+        cancel_requested_at: {type: string, format: date-time}
+        attempts:
+          type: array
+          items: {$ref: "#/components/schemas/JobAttempt"}

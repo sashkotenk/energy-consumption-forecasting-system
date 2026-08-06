@@ -163,6 +163,12 @@ class Job(Base):
             "created_at",
             postgresql_where=text("status = 'queued'"),
         ),
+        Index(
+            "ux_jobs_idempotency_key",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
         Index("ix_jobs_status_created", "status", desc("created_at")),
         {"schema": "app"},
     )
@@ -176,6 +182,7 @@ class Job(Base):
     progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    idempotency_key: Mapped[str | None] = mapped_column(String(200))
     worker_id: Mapped[str | None] = mapped_column(String(120))
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancel_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -185,6 +192,30 @@ class Job(Base):
     error_detail: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_timestamp()
     updated_at: Mapped[datetime] = created_timestamp()
+
+
+class JobAttempt(Base):
+    __tablename__ = "job_attempts"
+    __table_args__ = (
+        UniqueConstraint("job_id", "attempt"),
+        CheckConstraint("attempt >= 1"),
+        CheckConstraint("status IN ('running', 'cancelled', 'succeeded', 'failed', 'stale')"),
+        CheckConstraint("finished_at IS NULL OR finished_at >= started_at"),
+        Index("ix_job_attempts_job_started", "job_id", "started_at"),
+        {"schema": "app"},
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    job_id: Mapped[UUID] = mapped_column(
+        UUID_TYPE(as_uuid=True), ForeignKey("app.jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    worker_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    started_at: Mapped[datetime] = created_timestamp()
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_code: Mapped[str | None] = mapped_column(String(100))
+    error_detail: Mapped[str | None] = mapped_column(Text)
 
 
 class DatasetImport(Base):

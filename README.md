@@ -6,7 +6,7 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-04 extends the persistence foundation with controlled local artifact storage:
+TASK-05 extends the persistence and artifact foundations with a PostgreSQL-backed job queue:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
 - typed environment configuration with production startup validation;
@@ -18,15 +18,18 @@ TASK-04 extends the persistence foundation with controlled local artifact storag
 - an application-owned artifact port and a local filesystem adapter with generated opaque keys;
 - streamed SHA-256/size calculation, atomic collision-safe publication, and failed-write cleanup;
 - PostgreSQL artifact metadata, checksum lookup, controlled reads, and reference-checked deletion;
-- separate API and placeholder worker console entrypoints;
+- atomic multi-worker claims through short `FOR UPDATE SKIP LOCKED` transactions;
+- handler registry, heartbeat/progress reporting, cooperative cancellation, bounded retry, and
+  stale-worker recovery;
+- idempotent enqueue, polling, cancel, and retry endpoints with retained attempt evidence;
+- separate runnable API and worker processes from the same backend package;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Dataset APIs, queue processing, upload handling, and ML pipelines are intentionally deferred to
-later tasks. The implemented health, database, and artifact foundations are synchronized with their
-repository contracts; other operations remain design-time contracts until their corresponding
-features are implemented.
+Dataset upload/import APIs, concrete job handlers, and ML pipelines are intentionally deferred to
+later tasks. The worker claims only job types registered by those modules, so unsupported queued
+work remains durable instead of being failed by an incomplete handler set.
 
 ## Toolchain
 
@@ -132,6 +135,14 @@ python -m uv run energy-forecast-api
 
 Open `http://localhost:8000/docs` or request `http://localhost:8000/health/ready`. Stop the local
 database later with `docker compose stop db`; data remains in the named volume.
+
+Start the independent worker in another terminal with the same `DATABASE_URL`:
+
+```powershell
+Set-Location backend
+$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
+python -m uv run energy-forecast-worker
+```
 
 ## Architecture and contracts
 

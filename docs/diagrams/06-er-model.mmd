@@ -6,6 +6,7 @@ erDiagram
     ARTIFACTS ||--o{ DATASET_VERSIONS : source
     DATASETS ||--o{ DATASET_IMPORTS : imports
     JOBS ||--o| DATASET_IMPORTS : executes
+    JOBS ||--o{ JOB_ATTEMPTS : records
     DATASET_VERSIONS ||--o{ TRANSFORMATION_RUNS : source
     JOBS ||--o| TRANSFORMATION_RUNS : executes
     DATASET_VERSIONS ||--o{ EXPERIMENTS : used_by
