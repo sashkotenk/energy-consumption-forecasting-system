@@ -2,17 +2,17 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-01 delivery foundation, not the business system described by the design documents.
+The repository currently implements the TASK-02 delivery foundation, not the complete business system described by the design documents.
 
 ```text
 repository
-├── backend     installable Python src-layout package and compatibility tests
+├── backend     FastAPI/worker process boundaries, configuration, observability and tests
 ├── frontend    Vite React TypeScript shell and unit smoke test
 ├── docs        design contracts and implementation evidence
 └── CI          independent cached backend and frontend verification jobs
 ```
 
-The backend currently exposes only package metadata. The frontend renders an accessible Ukrainian bootstrap screen. No HTTP server, worker, database connection, migration, artifact store, dataset processing, or forecasting behavior exists yet.
+The backend exposes FastAPI liveness/readiness endpoints, typed environment settings, structured JSON logging, request correlation and a Problem Details error boundary. The API checks PostgreSQL readiness through a replaceable port; the worker entrypoint intentionally has no queue loop yet. The frontend renders an accessible Ukrainian bootstrap screen. No migration, persistent database model, artifact-store implementation, dataset processing, job execution, or forecasting behavior exists yet.
 
 ## Intended system architecture
 
@@ -31,7 +31,7 @@ Long-running work is designed to use a PostgreSQL-backed job queue with short cl
 
 ## Dependency direction
 
-Later backend modules must keep domain and application policies independent of FastAPI handlers, SQLAlchemy sessions, storage paths, and scikit-learn implementations where practical. Infrastructure implements ports owned by the application/domain layers.
+Backend modules keep domain and application policies independent of FastAPI handlers, SQLAlchemy sessions, storage paths, and scikit-learn implementations where practical. The implemented readiness port is the first such boundary; later infrastructure continues to implement ports owned by the application/domain layers.
 
 The planned frontend dependency direction is:
 
@@ -50,7 +50,7 @@ Server state belongs in TanStack Query, form state in React Hook Form and Zod, r
 - `docs/architecture/adr/README.md`
 - `docs/architecture/traceability.csv`
 
-These documents describe planned components. When implementation begins, runtime OpenAPI, Alembic migrations, passing tests, and recorded ADRs supersede design assumptions. Any deviation must be documented in the same change that introduces it.
+These documents describe planned and implemented components. Runtime OpenAPI for implemented routes, Alembic migrations, passing tests, and recorded ADRs supersede remaining design assumptions. Any deviation must be documented in the same change that introduces it.
 
 ## Reproducibility and safety constraints
 

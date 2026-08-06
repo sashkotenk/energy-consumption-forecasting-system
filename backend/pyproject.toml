@@ -18,16 +18,23 @@ dependencies = [
     "numpy>=2.3,<2.5",
     "pandas>=2.3,<4",
     "pydantic>=2.11,<3",
+    "pydantic-settings>=2.10,<3",
     "scikit-learn>=1.7,<2",
     "sqlalchemy>=2.0,<3",
+    "uvicorn>=0.35,<1",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.9,<3",
     "mypy>=1.17,<2",
     "pytest>=8.4,<10",
     "ruff>=0.12,<1",
 ]
+
+[project.scripts]
+energy-forecast-api = "energy_forecast.api:main"
+energy-forecast-worker = "energy_forecast.worker:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/energy_forecast"]
@@ -48,3 +55,8 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/energy_forecast/errors.py" = ["RUF001"]
+"src/energy_forecast/health.py" = ["RUF001"]
+"tests/integration/test_api_foundation.py" = ["RUF001"]

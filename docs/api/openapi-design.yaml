@@ -22,9 +22,13 @@ paths:
     get:
       tags: [System]
       operationId: getLiveness
+      parameters:
+        - {$ref: "#/components/parameters/RequestId"}
       responses:
         "200":
           description: Process is alive
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
           content:
             application/json:
               schema: {$ref: "#/components/schemas/HealthResponse"}
@@ -33,9 +37,13 @@ paths:
     get:
       tags: [System]
       operationId: getReadiness
+      parameters:
+        - {$ref: "#/components/parameters/RequestId"}
       responses:
         "200":
           description: Local required dependencies are ready
+          headers:
+            X-Request-ID: {$ref: "#/components/headers/RequestId"}
           content:
             application/json:
               schema: {$ref: "#/components/schemas/HealthResponse"}
@@ -429,6 +437,16 @@ paths:
 
 components:
   parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Optional caller correlation ID; invalid values are replaced.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
     DatasetId:
       name: datasetId
       in: path
@@ -479,14 +497,24 @@ components:
   responses:
     Problem:
       description: Problem Details
+      headers:
+        X-Request-ID: {$ref: "#/components/headers/RequestId"}
       content:
         application/problem+json:
           schema: {$ref: "#/components/schemas/Problem"}
 
+  headers:
+    RequestId:
+      description: Correlation ID used in structured request logs.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
   schemas:
     HealthResponse:
       type: object
-      required: [status]
+      required: [status, checks]
       properties:
         status: {type: string, enum: [ok, degraded]}
         checks:
@@ -495,7 +523,7 @@ components:
 
     Problem:
       type: object
-      required: [type, title, status, code]
+      required: [type, title, status, code, request_id]
       properties:
         type: {type: string, format: uri-reference}
         title: {type: string}
