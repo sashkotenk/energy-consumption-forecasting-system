@@ -50,7 +50,8 @@ data/raw/
 data/interim/
 data/processed/
 uploads/
-artifacts/
+/artifacts/
+/backend/artifacts/
 models/
 exports/
 *.joblib

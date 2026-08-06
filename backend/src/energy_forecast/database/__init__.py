@@ -1,5 +1,8 @@
 """PostgreSQL persistence infrastructure for EnergyForecast."""
 
+from energy_forecast.database.artifact_repository import (
+    SqlAlchemyArtifactMetadataRepository,
+)
 from energy_forecast.database.base import Base
 from energy_forecast.database.session import (
     AsyncSessionFactory,
@@ -11,6 +14,7 @@ from energy_forecast.database.session import (
 __all__ = [
     "AsyncSessionFactory",
     "Base",
+    "SqlAlchemyArtifactMetadataRepository",
     "create_database_engine",
     "create_session_factory",
     "transactional_session",

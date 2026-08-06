@@ -6,7 +6,7 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-03 extends the process foundation with persistent database infrastructure:
+TASK-04 extends the persistence foundation with controlled local artifact storage:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
 - typed environment configuration with production startup validation;
@@ -15,15 +15,18 @@ TASK-03 extends the process foundation with persistent database infrastructure:
 - Alembic migrations for all tables, constraints, indexes and TimescaleDB hypertables;
 - a pinned TimescaleDB 2.28.3 / PostgreSQL 17 Compose database;
 - explicit async session and transaction boundaries with repository integration tests;
+- an application-owned artifact port and a local filesystem adapter with generated opaque keys;
+- streamed SHA-256/size calculation, atomic collision-safe publication, and failed-write cleanup;
+- PostgreSQL artifact metadata, checksum lookup, controlled reads, and reference-checked deletion;
 - separate API and placeholder worker console entrypoints;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Dataset APIs, queue processing, artifact storage, and ML pipelines are intentionally deferred to later
-tasks. The implemented health and database foundations are synchronized with their repository
-contracts; other operations remain design-time contracts until their corresponding features are
-implemented.
+Dataset APIs, queue processing, upload handling, and ML pipelines are intentionally deferred to
+later tasks. The implemented health, database, and artifact foundations are synchronized with their
+repository contracts; other operations remain design-time contracts until their corresponding
+features are implemented.
 
 ## Toolchain
 

@@ -37,6 +37,15 @@ context, duration and error fields. An incoming safe `X-Request-ID` is preserved
 generates one and returns it in the response. Client errors use Ukrainian RFC-style Problem Details,
 while exception tracebacks remain only in logs.
 
+## Artifact storage
+
+`ArtifactService` is the application boundary for storing, finding, opening, and deleting artifact
+content. Construct `LocalArtifactStore` with `Settings.artifact_root` and pair it with
+`SqlAlchemyArtifactMetadataRepository`. The filesystem adapter accepts only generated opaque keys,
+keeps original filenames as metadata, streams writes, computes SHA-256 and byte size, and publishes
+completed files atomically without overwriting a collision. Database metadata maps the application
+`purpose` to the existing `app.artifacts.kind` column.
+
 The package uses a `src` layout. Dataset, queue and forecasting business modules are introduced by
 later implementation tasks.
 
