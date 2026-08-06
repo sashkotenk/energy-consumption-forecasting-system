@@ -248,3 +248,64 @@ The DDL, ADR index, traceability matrix, architecture snapshot, CI workflow and 
 now describe the implemented persistence baseline. OpenAPI and the ER diagram did not change because
 this task implements the already accepted entity and API boundaries without adding endpoints or
 relationships.
+
+## TASK-04 — Local Artifact Store
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** application-owned artifact and metadata ports; local filesystem adapter; generated opaque
+storage keys; streamed SHA-256 and size calculation; atomic no-overwrite publication; PostgreSQL
+metadata persistence and checksum lookup; controlled reads; reference-checked deletion; and cleanup
+after interrupted streams or failed metadata persistence. Dataset upload endpoints, model bundle
+serialization and export APIs remain assigned to later tasks.
+
+### Storage and persistence contract
+
+- `LocalArtifactStore` requires an explicit configured root, resolves it once, and accepts only one
+  generated-key format. Absolute paths, separators, traversal tokens and unsafe suffixes are rejected.
+- Writes use a temporary file below the configured root, flush and `fsync` completed bytes, and then
+  publish with an atomic same-filesystem hard link. Publication cannot overwrite a pre-existing key;
+  an opaque UUID key is regenerated on collision.
+- The adapter reads only regular files and returns streams. Its public values and controlled errors do
+  not expose the configured absolute path.
+- `ArtifactService` writes content before opening the repository's short metadata transaction. A
+  metadata failure compensates by deleting the completed file; an interrupted content stream never
+  calls the metadata repository and leaves no temporary file.
+- The application `ArtifactPurpose` values map to the existing `app.artifacts.kind` column. Metadata
+  includes purpose, media type, size, SHA-256, creation time, storage key and optional original name.
+  Original names remain metadata only and never participate in filesystem path construction.
+- Deletion locks and checks the metadata row, rejects references from dataset versions or model runs,
+  commits metadata removal, and then performs idempotent filesystem cleanup.
+
+### Verification evidence
+
+Commands were run from the locations required by the engineering instructions. The local shell did
+not expose a bare `uv` executable, so the repository-supported `python -m uv` fallback was used.
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` | `python -m uv run ruff format --check .` | exit 0; 37 files already formatted |
+| `backend` | `python -m uv run mypy src tests` | exit 0; no issues in 33 source files |
+| `backend` | `python -m uv run pytest tests/unit/test_local_artifact_store.py tests/unit/test_artifact_service.py -q` | exit 0; 14 passed, 0 failed |
+| `backend` | `python -m uv run pytest tests/integration/test_artifact_service.py -v` | exit 0; 1 passed, 0 failed against a disposable PostgreSQL database and temporary filesystem root |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 100.8 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 37 collected, 37 passed, 0 failed, 0 skipped in 53.33 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+### Contract and architecture impact
+
+No dependency or migration changed. TASK-03 had already created the accepted `app.artifacts` table,
+its SHA-256 index, allowed purposes and references. The application deliberately names the concept
+`purpose` while the stable database column remains `kind`; changing that column would add migration
+risk without changing behavior. The architecture snapshot, traceability matrix, root/backend
+runbooks and ignore rules now describe the implemented artifact boundary. OpenAPI, design DDL,
+diagrams and ADRs remain unchanged because no endpoint, database shape or accepted architecture
+decision changed.
