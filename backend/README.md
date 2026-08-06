@@ -39,3 +39,25 @@ while exception tracebacks remain only in logs.
 
 The package uses a `src` layout. Dataset, queue and forecasting business modules are introduced by
 later implementation tasks.
+
+## Database and migrations
+
+Start the pinned TimescaleDB service from the repository root, then run Alembic from `backend/`:
+
+```bash
+docker compose up -d --wait db
+cd backend
+uv run alembic upgrade head
+uv run alembic check
+```
+
+The local Alembic default uses `localhost:5432`. Application containers use the `db` hostname from
+`.env.example`. The mappings cover the `app`, `ts`, and `ml` schemas. The three temporal fact tables
+are native TimescaleDB hypertables. See `migrations/README.md` for the downgrade policy.
+
+Real database integration tests create disposable databases through `TEST_DATABASE_URL`:
+
+```bash
+TEST_DATABASE_URL=postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast \
+  uv run pytest -m integration
+```

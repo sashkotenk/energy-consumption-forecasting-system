@@ -48,6 +48,9 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
+markers = [
+    "integration: requires a real PostgreSQL/TimescaleDB server",
+]
 
 [tool.ruff]
 line-length = 100
@@ -60,3 +63,4 @@ select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
 "src/energy_forecast/errors.py" = ["RUF001"]
 "src/energy_forecast/health.py" = ["RUF001"]
 "tests/integration/test_api_foundation.py" = ["RUF001"]
+"migrations/versions/*.py" = ["E501"]

@@ -9,6 +9,7 @@ The root `ARCHITECTURE.md` is the concise snapshot of what is actually implement
 - `references/` — verified architecture and technical sources;
 - `traceability.csv` — mapping of requirements to components, data, API and tests.
 
-The full coursework planning documents and Codex materials are deliberately kept in the sibling private directory `../EnergyForecast-private/` and must not be committed to this repository.
+The full coursework planning and private workflow materials are deliberately kept in the sibling
+private directory and must not be committed to this repository.
 
 The current OpenAPI, DDL, diagrams and SAD files are design baselines. Whenever implementation differs from them, update the relevant ADR and synchronize the affected technical documentation in the same pull request.

@@ -1,0 +1,1 @@
+"""EnergyForecast backend test suite."""
