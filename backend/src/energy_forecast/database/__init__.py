@@ -4,6 +4,7 @@ from energy_forecast.database.artifact_repository import (
     SqlAlchemyArtifactMetadataRepository,
 )
 from energy_forecast.database.base import Base
+from energy_forecast.database.job_queue import SqlAlchemyJobQueue
 from energy_forecast.database.session import (
     AsyncSessionFactory,
     create_database_engine,
@@ -15,6 +16,7 @@ __all__ = [
     "AsyncSessionFactory",
     "Base",
     "SqlAlchemyArtifactMetadataRepository",
+    "SqlAlchemyJobQueue",
     "create_database_engine",
     "create_session_factory",
     "transactional_session",

@@ -85,6 +85,7 @@ CREATE TABLE app.jobs (
     progress_pct integer NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),
     attempt integer NOT NULL DEFAULT 0 CHECK (attempt >= 0),
     max_attempts integer NOT NULL DEFAULT 1 CHECK (max_attempts >= 1),
+    idempotency_key varchar(200),
     worker_id varchar(120),
     heartbeat_at timestamptz,
     cancel_requested_at timestamptz,
@@ -104,6 +105,29 @@ CREATE INDEX ix_jobs_claim
 
 CREATE INDEX ix_jobs_status_created
     ON app.jobs (status, created_at DESC);
+
+CREATE UNIQUE INDEX ux_jobs_idempotency_key
+    ON app.jobs (idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+
+CREATE TABLE app.job_attempts (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id uuid NOT NULL REFERENCES app.jobs(id) ON DELETE CASCADE,
+    attempt integer NOT NULL CHECK (attempt >= 1),
+    status varchar(32) NOT NULL CHECK (status IN (
+        'running', 'cancelled', 'succeeded', 'failed', 'stale'
+    )),
+    worker_id varchar(120) NOT NULL,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    finished_at timestamptz,
+    error_code varchar(100),
+    error_detail text,
+    UNIQUE (job_id, attempt),
+    CHECK (finished_at IS NULL OR finished_at >= started_at)
+);
+
+CREATE INDEX ix_job_attempts_job_started
+    ON app.job_attempts (job_id, started_at);
 
 CREATE TABLE app.dataset_imports (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

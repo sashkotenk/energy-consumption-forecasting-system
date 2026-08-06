@@ -16,6 +16,11 @@ _SETTING_NAMES = (
     "MAX_UPLOAD_BYTES",
     "LOG_LEVEL",
     "CODE_COMMIT",
+    "WORKER_POLL_INTERVAL_SECONDS",
+    "WORKER_HEARTBEAT_INTERVAL_SECONDS",
+    "WORKER_STALE_AFTER_SECONDS",
+    "WORKER_RECOVERY_BATCH_SIZE",
+    "WORKER_RUN_ONCE",
 )
 
 
@@ -80,6 +85,16 @@ def test_invalid_typed_setting_is_rejected(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("APP_PORT", "70000")
 
     with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_stale_timeout_must_exceed_heartbeat_interval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WORKER_HEARTBEAT_INTERVAL_SECONDS", "10")
+    monkeypatch.setenv("WORKER_STALE_AFTER_SECONDS", "10")
+
+    with pytest.raises(ValidationError, match="must be less"):
         Settings()
 
 

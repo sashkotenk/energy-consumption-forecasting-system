@@ -17,8 +17,17 @@ classDiagram
       +int progress
       +claim()
       +requestCancel()
+      +heartbeat(progress)
+      +retry()
       +complete()
       +fail()
+    }
+    class JobAttempt {
+      +int attempt
+      +JobStatus status
+      +string workerId
+      +datetime startedAt
+      +datetime finishedAt
     }
     class Experiment {
       +UUID id
@@ -68,5 +77,6 @@ classDiagram
     DatasetVersion --> Artifact
     ModelRun --> Artifact
     Experiment --> Job
+    Job "1" --> "*" JobAttempt
     ModelRun ..> ForecastingModel
     Experiment ..> FeatureBuilder

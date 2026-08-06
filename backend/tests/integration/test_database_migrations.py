@@ -18,6 +18,7 @@ EXPECTED_TABLES = {
         "dataset_imports",
         "dataset_versions",
         "datasets",
+        "job_attempts",
         "jobs",
         "transformation_runs",
         "weather_locations",
@@ -42,12 +43,14 @@ EXPECTED_INDEXES = {
     "ix_hourly_version_time",
     "ix_jobs_claim",
     "ix_jobs_status_created",
+    "ix_job_attempts_job_started",
     "ix_model_runs_experiment",
     "ix_quality_issues_version_time",
     "ix_quality_issues_version_type",
     "ix_raw_version_time",
     "ix_weather_location_time",
     "ux_dataset_versions_source",
+    "ux_jobs_idempotency_key",
     "ux_one_recommended_model_per_experiment",
 }
 

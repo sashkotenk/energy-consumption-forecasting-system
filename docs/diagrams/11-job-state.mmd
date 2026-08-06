@@ -7,9 +7,14 @@ stateDiagram-v2
     running --> succeeded: complete
     running --> failed: error
     running --> stale: heartbeat timeout
-    failed --> queued: retry allowed
-    stale --> queued: recover
-    stale --> failed: attempts exhausted
+    failed --> queued: explicit retry, attempt < max_attempts
+    stale --> queued: recover, attempt < max_attempts
+    stale --> failed: max_attempts exhausted
     cancelled --> [*]
     succeeded --> [*]
     failed --> [*]
+
+    note right of running
+        Claim commits before handler work.
+        Heartbeat and progress use short transactions.
+    end note

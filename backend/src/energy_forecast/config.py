@@ -56,6 +56,31 @@ class Settings(BaseSettings):
     )
     log_level: LogLevel = Field(default="INFO", validation_alias="LOG_LEVEL")
     code_commit: str = Field(default="unknown", min_length=1, validation_alias="CODE_COMMIT")
+    worker_poll_interval_seconds: float = Field(
+        default=1.0,
+        ge=0.05,
+        le=60,
+        validation_alias="WORKER_POLL_INTERVAL_SECONDS",
+    )
+    worker_heartbeat_interval_seconds: float = Field(
+        default=5.0,
+        ge=0.05,
+        le=300,
+        validation_alias="WORKER_HEARTBEAT_INTERVAL_SECONDS",
+    )
+    worker_stale_after_seconds: float = Field(
+        default=30.0,
+        ge=0.1,
+        le=3600,
+        validation_alias="WORKER_STALE_AFTER_SECONDS",
+    )
+    worker_recovery_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=1000,
+        validation_alias="WORKER_RECOVERY_BATCH_SIZE",
+    )
+    worker_run_once: bool = Field(default=False, validation_alias="WORKER_RUN_ONCE")
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -84,6 +109,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_requirements(self) -> Self:
+        if self.worker_heartbeat_interval_seconds >= self.worker_stale_after_seconds:
+            raise ValueError(
+                "WORKER_HEARTBEAT_INTERVAL_SECONDS must be less than WORKER_STALE_AFTER_SECONDS"
+            )
         if self.environment is not Environment.PRODUCTION:
             return self
 

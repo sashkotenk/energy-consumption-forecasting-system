@@ -20,10 +20,9 @@ After `uv sync --all-groups`, run the FastAPI process with:
 uv run energy-forecast-api
 ```
 
-The API exposes `/health/live`, `/health/ready`, `/docs`, and `/openapi.json`. Readiness
+The API exposes `/health/live`, `/health/ready`, `/jobs`, `/docs`, and `/openapi.json`. Readiness
 returns `503 application/problem+json` until `DATABASE_URL` points to an available PostgreSQL
-database. The worker boundary can be validated with `uv run energy-forecast-worker`; it only
-initializes configuration and logging until the PostgreSQL queue is implemented.
+database. `uv run energy-forecast-worker` starts the independent PostgreSQL polling process.
 
 ## Environment configuration
 
@@ -31,6 +30,8 @@ Settings are read from process environment variables and validated during proces
 the repository `.env.example` for the complete current list. `APP_PORT`, `MAX_UPLOAD_BYTES`,
 `LOG_LEVEL`, CORS origins, paths, and process identity are typed. In `production`, both
 `DATABASE_URL` and `CODE_COMMIT` are required; missing values stop startup before serving work.
+Worker polling, heartbeat, stale timeout, recovery batch size, and one-cycle smoke mode are typed
+settings. The heartbeat interval must remain shorter than the stale timeout.
 
 Every log record is one JSON object and includes service, environment, code commit, correlation
 context, duration and error fields. An incoming safe `X-Request-ID` is preserved; otherwise the API
@@ -46,8 +47,19 @@ keeps original filenames as metadata, streams writes, computes SHA-256 and byte 
 completed files atomically without overwriting a collision. Database metadata maps the application
 `purpose` to the existing `app.artifacts.kind` column.
 
-The package uses a `src` layout. Dataset, queue and forecasting business modules are introduced by
-later implementation tasks.
+## Job queue
+
+`SqlAlchemyJobQueue` owns short transactions for enqueue, claim, heartbeat, progress, completion,
+cancellation, retry, and stale recovery. Claim uses `FOR UPDATE SKIP LOCKED` and commits before a
+handler starts. `JobHandlerRegistry` prevents a worker from claiming types for which its process has
+no handler. Handlers receive `JobExecutionContext` and must call `report_progress()` or
+`raise_if_cancel_requested()` at safe checkpoints for cooperative cancellation.
+
+An optional idempotency key returns the original job when all enqueue fields match and returns a
+Problem Details conflict when the key is reused differently. Retry keeps the same job ID and stores
+each claimed attempt in `app.job_attempts`, preserving prior stale/failure evidence.
+
+The package uses a `src` layout. Dataset and forecasting handlers are introduced by later tasks.
 
 ## Database and migrations
 

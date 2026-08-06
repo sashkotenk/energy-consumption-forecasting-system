@@ -2,7 +2,7 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-04 artifact-storage foundation, not the complete business
+The repository currently implements the TASK-05 persistent-job foundation, not the complete business
 system described by the design documents.
 
 ```text
@@ -20,8 +20,11 @@ and three TimescaleDB hypertables. Async sessions are operation-scoped and trans
 are explicit. An application-owned artifact port now has a local adapter that streams bytes below a
 configured private root, publishes by generated opaque keys, records SHA-256 and size, and persists
 metadata through short PostgreSQL transactions. Reads resolve IDs through metadata, while deletion
-checks database references before cleaning up bytes. The worker still has no queue loop; dataset
-processing, job execution and forecasting behavior remain deferred.
+checks database references before cleaning up bytes. The job application boundary now defines the
+state machine, idempotency and bounded-retry rules. Its PostgreSQL adapter performs atomic short
+claims, records attempt history, heartbeats active work and recovers stale ownership. FastAPI
+provides enqueue/poll/cancel/retry operations, while the separate worker process executes only
+registered handlers. Concrete dataset and ML handlers remain deferred.
 
 ## Intended system architecture
 
@@ -36,14 +39,18 @@ Browser → reverse proxy → React SPA / FastAPI API
                                   ↔ artifact store
 ```
 
-Long-running work is designed to use a PostgreSQL-backed job queue with short claiming transactions and `FOR UPDATE SKIP LOCKED`. REST polling is the baseline progress mechanism. Redis, RabbitMQ, Celery, WebSocket, authentication, and microservices are outside the coursework baseline.
+Long-running work uses a PostgreSQL-backed job queue with short claiming transactions and
+`FOR UPDATE SKIP LOCKED`; the claim transaction is never held during handler work. REST polling is
+the progress mechanism. Redis, RabbitMQ, Celery, WebSocket, authentication, and microservices are
+outside the coursework baseline.
 
 ## Dependency direction
 
 Backend modules keep domain and application policies independent of FastAPI handlers, SQLAlchemy
 sessions, storage paths, and scikit-learn implementations where practical. Readiness and artifact
-ports are owned by application-facing modules; the local filesystem and SQLAlchemy adapters remain
-replaceable infrastructure details.
+and job ports are owned by application-facing modules; the local filesystem and SQLAlchemy adapters
+remain replaceable infrastructure details. Handler code depends on a job execution context rather
+than directly on FastAPI or a SQLAlchemy session.
 
 The planned frontend dependency direction is:
 

@@ -11,6 +11,7 @@ FR-09,Catalog and history queries,metadata tables,list endpoints,integration
 FR-10,FastAPI and OpenAPI,none,/api/v1,contract
 NFR-01,Configuration logging and health,none,/health/live and /health/ready,unit API contract
 NFR-02,Manifests and checksums,JSONB and SHA-256,detail endpoints,artifact checksum unit and integration; ML reproducibility pending
+NFR-03,PostgreSQL Job Queue,jobs job_attempts,/jobs enqueue poll cancel retry,state transition unit; queue concurrency recovery worker process integration
 NFR-04,Module boundaries,none,none,architecture import checks
 NFR-05,Docker Compose,volumes,future service health wiring,compose smoke
 NFR-06,Error boundary and future upload handling,generated storage keys,limits and Problem Details,path traversal atomic-write and cleanup tests; API upload security pending

@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from energy_forecast import __version__
 from energy_forecast.config import Service, Settings
+from energy_forecast.database import (
+    SqlAlchemyJobQueue,
+    create_database_engine,
+    create_session_factory,
+)
 from energy_forecast.errors import PROBLEM_MEDIA_TYPE, install_exception_handlers
 from energy_forecast.health import (
     DatabaseReadinessCheck,
@@ -15,6 +24,8 @@ from energy_forecast.health import (
     ReadinessCheck,
     create_health_router,
 )
+from energy_forecast.jobs.api import create_job_router
+from energy_forecast.jobs.ports import JobQueue
 from energy_forecast.logging_config import configure_logging
 from energy_forecast.request_context import RequestContextMiddleware
 
@@ -22,23 +33,44 @@ from energy_forecast.request_context import RequestContextMiddleware
 def create_app(
     settings: Settings | None = None,
     readiness_check: ReadinessCheck | None = None,
+    job_queue: JobQueue | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
     configure_logging(resolved_settings)
     resolved_check = readiness_check or _default_readiness_check(resolved_settings)
+    engine, resolved_queue = _default_job_queue(resolved_settings, job_queue)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            if engine is not None:
+                await engine.dispose()
 
     application = FastAPI(
         title="EnergyForecast API",
         version=__version__,
         description="Energy consumption analysis and forecasting API",
+        lifespan=lifespan,
     )
     application.state.settings = resolved_settings
     application.add_middleware(RequestContextMiddleware)
     install_exception_handlers(application)
     application.include_router(create_health_router(resolved_check))
+    application.include_router(create_job_router(resolved_queue))
     _install_openapi_contract(application)
     return application
+
+
+def _default_job_queue(
+    settings: Settings, queue: JobQueue | None
+) -> tuple[AsyncEngine | None, JobQueue | None]:
+    if queue is not None or settings.database_url is None:
+        return None, queue
+    engine = create_database_engine(settings.database_url.get_secret_value())
+    return engine, SqlAlchemyJobQueue(create_session_factory(engine))
 
 
 def _default_readiness_check(settings: Settings) -> ReadinessCheck:
