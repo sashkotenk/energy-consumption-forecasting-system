@@ -457,3 +457,68 @@ relationships, so no migration or DDL shape change was necessary; `alembic check
 No ADR was added because the implementation follows the accepted upload, immutability and job
 architecture without deviation. Architecture, traceability and runbooks now distinguish staging
 from the TASK-07 parsing responsibility.
+
+## TASK-07 — UCI and generic CSV parsers
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** streaming parser interface; fixed official-nine-column UCI profile; generic CSV delimiter
+and decimal detection, bounded preview, explicit timestamp/target/unit/timezone mapping; null-safe
+numeric parsing; source-row error evidence; chunked TimescaleDB inserts; restart-safe dataset-import
+worker handler; and versioned machine-readable import reports.
+
+### Import and restart contract
+
+- UCI rows use semicolon separation, `dd/mm/yyyy`, `HH:MM:SS`, decimal dot, one-minute intervals and
+  both empty and `?` missing tokens. Missing numeric values are stored as SQL null and flagged; they
+  are never replaced with zero.
+- The UCI profile records `Europe/Paris` as an explicit assumption required to normalize the source's
+  unpublished local-time semantics into a `timestamptz` partition key. Generic imports require an
+  embedded offset or explicit IANA timezone.
+- Generic imports require a timestamp mapping and exactly one selected primary semantic (`energy` or
+  `active_power`), with compatible `kWh`/`Wh` or `kW`/`W` units. Optional measurement mappings do not
+  change the selected target.
+- Parser batches bound retained row state. Every batch uses its own short transaction. A new attempt
+  deletes only normalized rows and parse errors from the earlier incomplete attempt; the raw artifact
+  and checksum remain immutable.
+- Malformed timestamp rows, which cannot satisfy the Timescale partition key, are persisted in
+  `app.dataset_import_errors`. Timestamp-valid rows retain `source_row_number`, parse status, null
+  fields and quality flags in `ts.raw_measurements`.
+- Only the final transaction marks the import `completed` and version `imported`. Failure or
+  cancellation marks the version `failed`, so committed partial batches are never advertised as a
+  usable dataset version.
+
+### Schema and architecture changes
+
+Migration `3f61c7a2e904` adds `app.dataset_import_errors`, `dataset_imports.import_report` and
+`dataset_imports.completed_at`. ADR-015 records the timezone assumption and retry semantics. The
+design DDL, OpenAPI import resource, traceability matrix, architecture snapshot and runbooks now
+match the runtime implementation.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_dataset_parsers.py tests/unit/test_dataset_upload_security.py -q` | exit 0; 15 passed, 0 failed in 0.13 s |
+| `backend` | `python -m uv run pytest tests/unit/test_parser_performance.py -q` | exit 0; 1 performance smoke passed, 0 failed in 6.70 s for 50,000 rows |
+| `backend` | `python -m uv run pytest tests/integration/test_database_migrations.py tests/integration/test_dataset_api.py tests/integration/test_dataset_import.py -v` | test command exit 0; 10 passed, 0 failed in 101.81 s against disposable TimescaleDB databases |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 221.2 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 63 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 57 source files |
+| `backend` via full gate | `python -m uv run alembic upgrade head` | exit 0; upgraded `8b31f6f2d912 -> 3f61c7a2e904` |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 98 collected, 1 performance test deselected, 97 passed, 0 failed, 0 skipped in 173.18 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+The first complete-gate attempt stopped at `ruff format --check` because the new migration required
+mechanical formatting. After formatting, the targeted lint/type checks and the complete gate above
+passed. A separate `alembic check` after the targeted integration run correctly reported that the
+persistent development database had not yet applied the new revision; the complete gate applied it
+and confirmed zero model drift.

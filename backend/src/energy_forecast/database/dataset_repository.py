@@ -132,6 +132,7 @@ class SqlAlchemyDatasetCatalogRepository:
         import_profile: ImportProfile,
         import_options: Mapping[str, Any],
         detected_format: Mapping[str, Any],
+        preview: Mapping[str, Any],
     ) -> DatasetImportRecord:
         async with transactional_session(self._session_factory) as session:
             dataset = await session.scalar(
@@ -187,6 +188,7 @@ class SqlAlchemyDatasetCatalogRepository:
                     "artifact_id": str(artifact.id),
                     "import_profile": import_profile.value,
                     "import_options": options,
+                    "detected_format": detected,
                 },
                 progress_pct=0,
                 attempt=0,
@@ -201,6 +203,7 @@ class SqlAlchemyDatasetCatalogRepository:
                 status=DatasetImportStatus.QUEUED.value,
                 import_options=options,
                 detected_format=detected,
+                preview=dict(preview),
             )
             session.add_all((version, job))
             await session.flush()
@@ -237,7 +240,10 @@ def _to_import_record(row: DatasetImport) -> DatasetImportRecord:
         status=DatasetImportStatus(row.status),
         import_options=dict(row.import_options),
         detected_format=dict(row.detected_format or {}),
+        preview=dict(row.preview) if row.preview is not None else None,
+        import_report=dict(row.import_report) if row.import_report is not None else None,
         created_at=row.created_at,
+        completed_at=row.completed_at,
     )
 
 

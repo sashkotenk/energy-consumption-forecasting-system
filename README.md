@@ -6,7 +6,7 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-06 adds the dataset catalog and secure upload-staging workflow on top of the persistence,
+TASK-07 adds streaming UCI and generic CSV ingestion on top of the dataset staging, persistence,
 artifact, and job foundations:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
@@ -26,15 +26,17 @@ artifact, and job foundations:
 - dataset list/detail/create/update/delete endpoints with pagination and dependency-safe deletion;
 - bounded multipart `.csv`/`.txt` staging with filename and option sanitization plus content checks;
 - immutable raw artifacts and atomic dataset-version/import/job creation returning `202 Accepted`;
+- fixed official-nine-column UCI parsing and explicitly mapped generic CSV parsing;
+- bounded structural preview, delimiter/decimal detection, timezone and target-unit normalization;
+- chunked raw-measurement inserts with source-row parse errors and restart-safe worker attempts;
 - separate runnable API and worker processes from the same backend package;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Full UCI/generic CSV parsing, concrete dataset-import handlers, and ML pipelines are intentionally
-deferred to later tasks. The request path validates and stores the file but never parses millions of
-rows. The worker claims only job types registered by those modules, so the staged import remains
-durable until its handler is introduced.
+Quality classification, controlled cleaning, hourly aggregation and ML pipelines remain assigned to
+later tasks. The request path still validates and stores the file without parsing millions of rows;
+the worker owns chunked normalization and commits only bounded batches.
 
 ## Toolchain
 

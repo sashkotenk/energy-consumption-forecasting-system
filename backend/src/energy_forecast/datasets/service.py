@@ -22,6 +22,7 @@ from energy_forecast.datasets.models import (
     StagedDatasetImport,
     UploadTooLargeError,
 )
+from energy_forecast.datasets.parsers import GenericCsvMapping
 from energy_forecast.datasets.ports import DatasetCatalogRepository
 
 _ALLOWED_SUFFIXES = frozenset({".csv", ".txt"})
@@ -46,6 +47,14 @@ _IMPORT_OPTION_KEYS = frozenset(
         "power_column",
         "unit",
         "duplicate_policy",
+        "target_semantic",
+        "interval_seconds",
+        "reactive_power_kw_column",
+        "voltage_v_column",
+        "current_a_column",
+        "sub_metering_1_wh_column",
+        "sub_metering_2_wh_column",
+        "sub_metering_3_wh_column",
     }
 )
 
@@ -117,7 +126,16 @@ class DatasetService:
         await self.get(dataset_id)
         safe_options = _sanitize_import_options(import_options)
         safe_name, suffix = _sanitize_filename(original_name)
-        detected_format = _inspect_csv_like(stream, import_profile, safe_options)
+        inspection = _inspect_csv_like(
+            stream, import_profile, safe_options, max_bytes=self._max_upload_bytes
+        )
+        preview = cast(dict[str, Any], inspection.pop("preview"))
+        detected_format = inspection
+        if import_profile is ImportProfile.GENERIC_CSV:
+            GenericCsvMapping.from_options(
+                safe_options,
+                detected_delimiter=cast(str, detected_format["delimiter"]),
+            )
         stream.seek(0)
         artifact = await self._artifacts.create(
             cast(BinaryIO, _LimitedReader(stream, self._max_upload_bytes)),
@@ -133,6 +151,7 @@ class DatasetService:
                 import_profile=import_profile,
                 import_options=safe_options,
                 detected_format=detected_format,
+                preview=preview,
             )
         except BaseException:
             await self._artifacts.delete(artifact.id)
@@ -203,12 +222,16 @@ def _inspect_csv_like(
     stream: BinaryIO,
     import_profile: ImportProfile,
     import_options: Mapping[str, Any],
+    *,
+    max_bytes: int,
 ) -> dict[str, Any]:
-    sample = stream.read(_SNIFF_BYTES)
+    sample = stream.read(min(_SNIFF_BYTES, max_bytes + 1))
     if not isinstance(sample, bytes):
         raise TypeError("Dataset streams must return bytes")
     if not sample:
         raise DatasetUploadError("dataset_upload_empty", "Завантажений файл порожній.")
+    if len(sample) > max_bytes:
+        raise UploadTooLargeError(max_bytes)
     if b"\x00" in sample or any(sample.startswith(prefix) for prefix in _SUSPICIOUS_PREFIXES):
         raise _unexpected_content()
     try:
@@ -229,7 +252,16 @@ def _inspect_csv_like(
     widths = [len(row) for row in rows]
     if min(widths) < 2 or len(set(widths)) != 1:
         raise _unexpected_content()
-    return {"encoding": "utf-8", "delimiter": delimiter, "column_count": widths[0]}
+    return {
+        "encoding": "utf-8",
+        "delimiter": delimiter,
+        "column_count": widths[0],
+        "preview": {
+            "columns": rows[0],
+            "rows": rows[1:6],
+            "truncated": len(rows) > 6 or len(sample) == _SNIFF_BYTES,
+        },
+    }
 
 
 def _resolve_delimiter(

@@ -102,7 +102,10 @@ class DatasetImportResponse(BaseModel):
     status: str
     import_options: dict[str, Any]
     detected_format: dict[str, Any]
+    preview: dict[str, Any] | None
+    import_report: dict[str, Any] | None
     created_at: datetime
+    completed_at: datetime | None
 
 
 _PROBLEM_RESPONSE = {
@@ -235,6 +238,8 @@ def create_dataset_router(service: DatasetService | None) -> APIRouter:
         duplicate_policy: Annotated[
             Literal["reject", "keep_first", "keep_last", "mean"] | None, Form()
         ] = None,
+        target_semantic: Annotated[Literal["energy", "active_power"] | None, Form()] = None,
+        interval_seconds: Annotated[int | None, Form(gt=0)] = None,
     ) -> DatasetImportAccepted:
         options = {
             key: value
@@ -249,6 +254,8 @@ def create_dataset_router(service: DatasetService | None) -> APIRouter:
                 "power_column": power_column,
                 "unit": unit,
                 "duplicate_policy": duplicate_policy,
+                "target_semantic": target_semantic,
+                "interval_seconds": str(interval_seconds) if interval_seconds is not None else None,
             }.items()
             if value is not None
         }
@@ -379,5 +386,8 @@ def _to_import_response(import_record: DatasetImportRecord) -> DatasetImportResp
         status=import_record.status.value,
         import_options=import_record.import_options,
         detected_format=import_record.detected_format,
+        preview=import_record.preview,
+        import_report=import_record.import_report,
         created_at=import_record.created_at,
+        completed_at=import_record.completed_at,
     )

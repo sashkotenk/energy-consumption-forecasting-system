@@ -101,6 +101,7 @@ class MemoryDatasetRepository:
         import_profile: ImportProfile,
         import_options: Mapping[str, Any],
         detected_format: Mapping[str, Any],
+        preview: Mapping[str, Any],
     ) -> DatasetImportRecord:
         self.staged = DatasetImportRecord(
             id=uuid4(),
@@ -111,7 +112,10 @@ class MemoryDatasetRepository:
             status=DatasetImportStatus.QUEUED,
             import_options=dict(import_options),
             detected_format=dict(detected_format),
+            preview=dict(preview),
+            import_report=None,
             created_at=datetime.now(UTC),
+            completed_at=None,
         )
         return self.staged
 

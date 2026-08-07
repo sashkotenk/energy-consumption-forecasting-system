@@ -142,9 +142,26 @@ CREATE TABLE app.dataset_imports (
     import_options jsonb NOT NULL,
     detected_format jsonb,
     preview jsonb,
+    import_report jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
+    completed_at timestamptz,
     UNIQUE (job_id)
 );
+
+CREATE TABLE app.dataset_import_errors (
+    id bigserial PRIMARY KEY,
+    import_id uuid NOT NULL REFERENCES app.dataset_imports(id) ON DELETE CASCADE,
+    source_row_number bigint NOT NULL CHECK (source_row_number >= 1),
+    parse_status varchar(20) NOT NULL DEFAULT 'invalid' CHECK (parse_status = 'invalid'),
+    code varchar(80) NOT NULL,
+    column_name varchar(100),
+    message varchar(500) NOT NULL,
+    evidence jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ix_import_errors_import_row
+    ON app.dataset_import_errors (import_id, source_row_number);
 
 CREATE TABLE app.data_quality_issues (
     id bigserial PRIMARY KEY,

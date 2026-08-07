@@ -35,6 +35,7 @@ class DatasetCatalogRepository(Protocol):
         import_profile: ImportProfile,
         import_options: Mapping[str, Any],
         detected_format: Mapping[str, Any],
+        preview: Mapping[str, Any],
     ) -> DatasetImportRecord: ...
 
     async def get_import(self, import_id: UUID) -> DatasetImportRecord | None: ...
