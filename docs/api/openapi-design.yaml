@@ -625,6 +625,8 @@ components:
         duplicate_policy:
           type: string
           enum: [reject, keep_first, keep_last, mean]
+        target_semantic: {type: string, enum: [energy, active_power]}
+        interval_seconds: {type: integer, minimum: 1}
 
     AcceptedJob:
       type: object
@@ -646,7 +648,7 @@ components:
       type: object
       required:
         [id, dataset_id, dataset_version_id, job_id, import_profile,
-         status, import_options, detected_format, created_at]
+         status, import_options, detected_format, preview, created_at]
       properties:
         id: {type: string, format: uuid}
         dataset_id: {type: string, format: uuid}
@@ -656,7 +658,10 @@ components:
         status: {type: string}
         import_options: {type: object}
         detected_format: {type: object}
+        preview: {type: object}
+        import_report: {type: [object, "null"]}
         created_at: {type: string, format: date-time}
+        completed_at: {type: [string, "null"], format: date-time}
 
     DatasetVersion:
       type: object

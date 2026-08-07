@@ -15,6 +15,7 @@ EXPECTED_TABLES = {
     "app": {
         "artifacts",
         "data_quality_issues",
+        "dataset_import_errors",
         "dataset_imports",
         "dataset_versions",
         "datasets",
@@ -37,6 +38,7 @@ EXPECTED_TABLES = {
 EXPECTED_INDEXES = {
     "ix_artifacts_sha256",
     "ix_dataset_versions_dataset_created",
+    "ix_import_errors_import_row",
     "ix_experiments_version_created",
     "ix_forecasts_version_created",
     "ix_hourly_training_ready",

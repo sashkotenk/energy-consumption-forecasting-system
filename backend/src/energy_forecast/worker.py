@@ -8,12 +8,18 @@ import os
 import socket
 from uuid import uuid4
 
+from energy_forecast.artifacts.local import LocalArtifactStore
+from energy_forecast.artifacts.service import ArtifactService
 from energy_forecast.config import Service, Settings
 from energy_forecast.database import (
+    SqlAlchemyArtifactMetadataRepository,
+    SqlAlchemyDatasetImportRepository,
     SqlAlchemyJobQueue,
     create_database_engine,
     create_session_factory,
 )
+from energy_forecast.datasets.importing import DatasetImportHandler
+from energy_forecast.jobs.domain import JobType
 from energy_forecast.jobs.worker import JobHandlerRegistry, JobWorker
 from energy_forecast.logging_config import configure_logging
 
@@ -26,8 +32,20 @@ async def run_worker(settings: Settings, registry: JobHandlerRegistry | None = N
 
     engine = create_database_engine(settings.database_url.get_secret_value())
     worker_id = _worker_id()
-    resolved_registry = registry or JobHandlerRegistry()
-    queue = SqlAlchemyJobQueue(create_session_factory(engine))
+    session_factory = create_session_factory(engine)
+    queue = SqlAlchemyJobQueue(session_factory)
+    if registry is None:
+        resolved_registry = JobHandlerRegistry()
+        artifacts = ArtifactService(
+            LocalArtifactStore(settings.artifact_root),
+            SqlAlchemyArtifactMetadataRepository(session_factory),
+        )
+        resolved_registry.register(
+            JobType.DATASET_IMPORT,
+            DatasetImportHandler(SqlAlchemyDatasetImportRepository(session_factory), artifacts),
+        )
+    else:
+        resolved_registry = registry
     worker = JobWorker(
         queue,
         resolved_registry,

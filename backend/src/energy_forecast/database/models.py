@@ -244,6 +244,36 @@ class DatasetImport(Base):
     import_options: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
     detected_format: Mapped[dict[str, Any] | None] = mapped_column(JSON())
     preview: Mapped[dict[str, Any] | None] = mapped_column(JSON())
+    import_report: Mapped[dict[str, Any] | None] = mapped_column(JSON())
+    created_at: Mapped[datetime] = created_timestamp()
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DatasetImportError(Base):
+    __tablename__ = "dataset_import_errors"
+    __table_args__ = (
+        CheckConstraint("source_row_number >= 1"),
+        CheckConstraint("parse_status = 'invalid'"),
+        Index("ix_import_errors_import_row", "import_id", "source_row_number"),
+        {"schema": "app"},
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    import_id: Mapped[UUID] = mapped_column(
+        UUID_TYPE(as_uuid=True),
+        ForeignKey("app.dataset_imports.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source_row_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    parse_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'invalid'")
+    )
+    code: Mapped[str] = mapped_column(String(80), nullable=False)
+    column_name: Mapped[str | None] = mapped_column(String(100))
+    message: Mapped[str] = mapped_column(String(500), nullable=False)
+    evidence: Mapped[dict[str, Any]] = mapped_column(
+        JSON(), nullable=False, server_default=text("'{}'::jsonb")
+    )
     created_at: Mapped[datetime] = created_timestamp()
 
 

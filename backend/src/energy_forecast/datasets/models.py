@@ -59,7 +59,10 @@ class DatasetImportRecord:
     status: DatasetImportStatus
     import_options: dict[str, Any]
     detected_format: dict[str, Any]
+    preview: dict[str, Any] | None
+    import_report: dict[str, Any] | None
     created_at: datetime
+    completed_at: datetime | None
 
 
 @dataclass(frozen=True, slots=True)

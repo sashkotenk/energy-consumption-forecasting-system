@@ -18,5 +18,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-012 | No arbitrary model import | prevent unsafe pickle/joblib loading |
 | ADR-013 | TimescaleDB 2.28 hypertable DDL | pinned runtime uses the current `CREATE TABLE ... WITH` API |
 | ADR-014 | Job idempotency, retry and attempt history | replay returns the original job; attempt evidence is retained |
+| ADR-015 | Import timezone and restart policy | explicit UCI timezone assumption; partial attempts are never valid |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.
