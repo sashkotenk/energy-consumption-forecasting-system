@@ -11,8 +11,8 @@ from typing import Any
 # The export must not depend on a developer or CI database being configured.
 os.environ.pop("DATABASE_URL", None)
 
-from energy_forecast.api import create_app  # noqa: E402
-from energy_forecast.config import Service, Settings  # noqa: E402
+from energy_forecast.api import create_app
+from energy_forecast.config import Service, Settings
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "docs" / "api" / "openapi.json"
