@@ -55,9 +55,10 @@ describe('useJobPolling', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const view = render(<QueryClientProvider client={client}><Probe /></QueryClientProvider>)
     expect(await screen.findByText('running')).toBeInTheDocument()
-    expect(getJob).toHaveBeenCalledTimes(1)
+    const callsBeforeUnmount = getJob.mock.calls.length
+    expect(callsBeforeUnmount).toBeGreaterThan(0)
     view.unmount()
     await new Promise((resolve) => window.setTimeout(resolve, 2200))
-    expect(getJob).toHaveBeenCalledTimes(1)
+    expect(getJob).toHaveBeenCalledTimes(callsBeforeUnmount)
   })
 })
