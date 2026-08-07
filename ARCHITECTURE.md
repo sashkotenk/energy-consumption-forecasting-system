@@ -3,9 +3,9 @@
 ## Implemented snapshot
 
 The repository implements the backend flow from ingestion and quality processing through analytics,
-ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product core is
-implemented through dataset ingestion, data-quality review and bounded analytics views; experiment and
-forecast product pages remain assigned to the next feature task.
+ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product flow now
+covers dataset ingestion and quality review, bounded analytics, experiment creation and terminal-state
+handling, baseline model comparison, verified forecast creation, forecast review and controlled exports.
 
 ```text
 repository
@@ -62,14 +62,21 @@ scaler; Random Forest and HistGradientBoosting use the fixed seed and bounded pr
 Benchmark execution limits native and horizon parallelism to one, while production parallelism is
 an explicit runtime profile.
 
-The frontend now follows the documented `app/pages/shared/generated` dependency direction. `AppShell`
+The frontend follows the documented `app/pages/shared/generated` dependency direction. `AppShell`
 provides keyboard-accessible navigation and route composition; TanStack Query owns server state and a
-bounded polling hook stops on terminal job states; React Hook Form plus Zod own import-form state and
-validation. The generated TypeScript SDK is configured once in `shared/api/client.ts` and no API DTOs
-are duplicated by hand. Dashboard, dataset catalog/details, the eight-step import wizard, data-quality
-review and bounded analytics routes call that SDK. Analytics charts are rendered through a reusable
-ECharts wrapper that disposes chart instances on cleanup and provides textual or tabular alternatives.
-Loading, empty and error states are shared Ukrainian UI components rather than page-local conventions.
+bounded polling hook applies capped backoff and stops on terminal job states or component unmount;
+React Hook Form plus Zod own import, experiment and forecast form state and validation. The generated
+TypeScript SDK is configured once in `shared/api/client.ts` and no API DTOs are duplicated by hand.
+Dashboard, dataset catalog/details, the eight-step import wizard, data-quality review and bounded
+analytics routes call that SDK. Experiment pages add history, builder, progress, cancel/retry and
+comparison flows. Seasonal Naive-24 is injected as the non-removable comparison baseline, while W1 is
+shown as unavailable until weather data is connected. Forecast pages create and display the exact
+24-point result, total daily energy and actual-versus-predicted values when observations exist.
+Experiment and forecast exports first create server-side artifacts and then retrieve bytes through the
+controlled artifact-download endpoint; frontend code ignores storage-like response URLs. ECharts is
+wrapped once, disposed during cleanup, keyboard-focusable and paired with captions or numeric table
+alternatives. Loading, empty and error states are shared Ukrainian UI components rather than
+page-local conventions.
 
 ## Intended system architecture
 

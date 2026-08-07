@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
 
 export function EChart({ option, label, summary, height = 320 }: { option: EChartsOption; label: string; summary: string; height?: number }) {
   const ref = useRef<HTMLDivElement>(null)
+  const summaryId = useId()
 
   useEffect(() => {
     if (!ref.current) return
@@ -19,8 +20,8 @@ export function EChart({ option, label, summary, height = 320 }: { option: EChar
 
   return (
     <figure className="chart-card">
-      <div ref={ref} role="img" aria-label={label} style={{ height }} />
-      <figcaption>{summary}</figcaption>
+      <div ref={ref} role="img" aria-label={label} aria-describedby={summaryId} tabIndex={0} style={{ height }} />
+      <figcaption id={summaryId}>{summary}</figcaption>
     </figure>
   )
 }
