@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { JobStatus, type JobResponse } from '../../generated/api/models'
+import { JobStatus, JobType, type JobResponse } from '../../generated/api/models'
 import { api } from '../api/client'
 import { useJobPolling } from './useJobPolling'
 
@@ -13,7 +13,7 @@ function Probe() {
 describe('useJobPolling', () => {
   it('stops polling after a terminal result', async () => {
     const now = new Date()
-    const getJob = vi.spyOn(api.jobs, 'getJob').mockResolvedValue({
+    const response: JobResponse = {
       attempt: 1,
       attempts: [],
       cancelRequestedAt: null,
@@ -23,14 +23,15 @@ describe('useJobPolling', () => {
       finishedAt: now,
       heartbeatAt: now,
       id: 'job-1',
-      jobType: 'experiment',
+      jobType: JobType.Experiment,
       maxAttempts: 3,
       progressPct: 100,
       result: null,
       startedAt: now,
       status: JobStatus.Failed,
       updatedAt: now,
-    } as JobResponse)
+    }
+    const getJob = vi.spyOn(api.jobs, 'getJob').mockResolvedValue(response)
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><Probe /></QueryClientProvider>)
     expect(await screen.findByText('failed')).toBeInTheDocument()
