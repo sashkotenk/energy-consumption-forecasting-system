@@ -108,6 +108,16 @@ async def test_model_bundle_load_rejects_schema_and_version_policy_mismatch(
 
 
 @pytest.mark.anyio
+async def test_model_bundle_load_rejects_forecast_dataset_mismatch(tmp_path: Path) -> None:
+    service, _ = _bundle_service(tmp_path)
+    schema = FeatureSchema.create(include_quality_features=False)
+    saved = await service.save(_DirectPredictor(), _details(schema, uuid4()))
+
+    with pytest.raises(IncompatibleModelBundleError, match="training dataset version"):
+        await service.load(saved.artifact_id, _policy(schema, uuid4()))
+
+
+@pytest.mark.anyio
 async def test_model_bundle_load_refuses_non_model_artifact(tmp_path: Path) -> None:
     service, repository = _bundle_service(tmp_path)
     artifacts = ArtifactService(LocalArtifactStore(tmp_path), repository)

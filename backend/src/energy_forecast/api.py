@@ -21,6 +21,7 @@ from energy_forecast.database import (
     SqlAlchemyArtifactMetadataRepository,
     SqlAlchemyDatasetCatalogRepository,
     SqlAlchemyExperimentRepository,
+    SqlAlchemyForecastRepository,
     SqlAlchemyJobQueue,
     SqlAlchemyQualityRepository,
     SqlAlchemyTransformationRepository,
@@ -32,6 +33,8 @@ from energy_forecast.datasets.service import DatasetService
 from energy_forecast.errors import PROBLEM_MEDIA_TYPE, install_exception_handlers
 from energy_forecast.experiments.api import create_experiment_router
 from energy_forecast.experiments.service import ExperimentService
+from energy_forecast.forecasting.api import create_forecast_router
+from energy_forecast.forecasting.service import ForecastService
 from energy_forecast.health import (
     DatabaseReadinessCheck,
     MissingDatabaseReadinessCheck,
@@ -41,6 +44,7 @@ from energy_forecast.health import (
 from energy_forecast.jobs.api import create_job_router
 from energy_forecast.jobs.ports import JobQueue
 from energy_forecast.logging_config import configure_logging
+from energy_forecast.ml.bundles import ModelBundleService
 from energy_forecast.quality.api import create_quality_router
 from energy_forecast.quality.service import QualityService
 from energy_forecast.request_context import RequestContextMiddleware
@@ -57,6 +61,7 @@ def create_app(
     transformation_service: TransformationService | None = None,
     analytics_service: AnalyticsService | None = None,
     experiment_service: ExperimentService | None = None,
+    forecast_service: ForecastService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
@@ -70,6 +75,7 @@ def create_app(
         resolved_transformation_service,
         resolved_analytics_service,
         resolved_experiment_service,
+        resolved_forecast_service,
     ) = _default_application_services(
         resolved_settings,
         job_queue,
@@ -78,6 +84,7 @@ def create_app(
         transformation_service,
         analytics_service,
         experiment_service,
+        forecast_service,
     )
 
     @asynccontextmanager
@@ -104,6 +111,7 @@ def create_app(
     application.include_router(create_transformation_router(resolved_transformation_service))
     application.include_router(create_analytics_router(resolved_analytics_service))
     application.include_router(create_experiment_router(resolved_experiment_service))
+    application.include_router(create_forecast_router(resolved_forecast_service))
     _install_openapi_contract(application)
     return application
 
@@ -116,6 +124,7 @@ def _default_application_services(
     transformation_service: TransformationService | None,
     analytics_service: AnalyticsService | None,
     experiment_service: ExperimentService | None,
+    forecast_service: ForecastService | None,
 ) -> tuple[
     AsyncEngine | None,
     JobQueue | None,
@@ -124,6 +133,7 @@ def _default_application_services(
     TransformationService | None,
     AnalyticsService | None,
     ExperimentService | None,
+    ForecastService | None,
 ]:
     if settings.database_url is None:
         return (
@@ -134,6 +144,7 @@ def _default_application_services(
             transformation_service,
             analytics_service,
             experiment_service,
+            forecast_service,
         )
     engine = create_database_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
@@ -152,6 +163,14 @@ def _default_application_services(
         resolved_queue,
         code_commit=settings.code_commit,
     )
+    artifacts = ArtifactService(
+        LocalArtifactStore(settings.artifact_root),
+        SqlAlchemyArtifactMetadataRepository(session_factory),
+    )
+    resolved_forecast_service = forecast_service or ForecastService(
+        SqlAlchemyForecastRepository(session_factory),
+        ModelBundleService(artifacts),
+    )
     if dataset_service is not None:
         return (
             engine,
@@ -161,11 +180,8 @@ def _default_application_services(
             resolved_transformation_service,
             resolved_analytics_service,
             resolved_experiment_service,
+            resolved_forecast_service,
         )
-    artifacts = ArtifactService(
-        LocalArtifactStore(settings.artifact_root),
-        SqlAlchemyArtifactMetadataRepository(session_factory),
-    )
     resolved_dataset_service = DatasetService(
         SqlAlchemyDatasetCatalogRepository(session_factory),
         artifacts,
@@ -179,6 +195,7 @@ def _default_application_services(
         resolved_transformation_service,
         resolved_analytics_service,
         resolved_experiment_service,
+        resolved_forecast_service,
     )
 
 

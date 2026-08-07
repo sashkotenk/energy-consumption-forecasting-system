@@ -9,6 +9,7 @@ from energy_forecast.database.dataset_repository import (
     SqlAlchemyDatasetCatalogRepository,
 )
 from energy_forecast.database.experiment_repository import SqlAlchemyExperimentRepository
+from energy_forecast.database.forecast_repository import SqlAlchemyForecastRepository
 from energy_forecast.database.import_repository import SqlAlchemyDatasetImportRepository
 from energy_forecast.database.job_queue import SqlAlchemyJobQueue
 from energy_forecast.database.quality_repository import SqlAlchemyQualityRepository
@@ -30,6 +31,7 @@ __all__ = [
     "SqlAlchemyDatasetCatalogRepository",
     "SqlAlchemyDatasetImportRepository",
     "SqlAlchemyExperimentRepository",
+    "SqlAlchemyForecastRepository",
     "SqlAlchemyJobQueue",
     "SqlAlchemyQualityRepository",
     "SqlAlchemyTransformationRepository",

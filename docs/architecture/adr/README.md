@@ -26,5 +26,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-020 | Verified internal model bundles | compatibility and two checksums are verified before trusted joblib load |
 | ADR-021 | Direct model execution profiles | 24 estimators share bounded parameters; benchmark and production parallelism are separate |
 | ADR-022 | Experiment selection before final test | common CV origins and persisted metrics precede one final-test evaluation |
+| ADR-023 | Synchronous verified-bundle forecasts | one feature vector is bounded work; 24 points persist atomically |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.
