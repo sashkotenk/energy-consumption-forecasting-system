@@ -348,11 +348,15 @@ CREATE TABLE ml.experiments (
     selection_rule_version varchar(80) NOT NULL,
     code_commit varchar(64),
     environment_manifest jsonb NOT NULL DEFAULT '{}'::jsonb,
+    result_manifest jsonb,
+    failure_code varchar(80),
+    failure_detail text,
     final_test_opened_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
     started_at timestamptz,
     finished_at timestamptz,
-    UNIQUE (job_id)
+    UNIQUE (job_id),
+    CHECK (status <> 'completed' OR result_manifest IS NOT NULL)
 );
 
 CREATE INDEX ix_experiments_version_created
@@ -381,6 +385,8 @@ CREATE TABLE ml.model_runs (
     predict_ms_median double precision CHECK (predict_ms_median IS NULL OR predict_ms_median >= 0),
     artifact_size_bytes bigint CHECK (artifact_size_bytes IS NULL OR artifact_size_bytes >= 0),
     artifact_id uuid REFERENCES app.artifacts(id) ON DELETE RESTRICT,
+    failure_code varchar(80),
+    failure_detail text,
     is_recommended boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     completed_at timestamptz

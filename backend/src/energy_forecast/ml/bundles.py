@@ -40,7 +40,7 @@ class ModelBundleManifest(BaseModel):
     feature_names: tuple[str, ...] = Field(min_length=1)
     training_dataset_version_id: UUID
     split_definition: str = Field(min_length=1, max_length=160)
-    code_commit: str = Field(pattern=r"^[0-9a-f]{7,64}$")
+    code_commit: str = Field(min_length=1, max_length=64)
     random_seed: int
     created_at: datetime
     library_versions: dict[str, str]

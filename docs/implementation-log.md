@@ -848,3 +848,49 @@ measurement.
 
 ADR-021 records the direct-model, early-stopping and execution-profile choices. No API, database table
 or migration changes are required for the estimator layer.
+
+## TASK-14 — Experiment orchestration and selection
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** immutable experiment staging; algorithm discovery, list/detail/comparison/cancel routes;
+PostgreSQL job and model-run creation; quality-policy filtering; common eligible origins; bounded
+four-fold CV; per-model failure evidence; fold and horizon metrics; deterministic recommendation;
+one final-test evaluation; verified model bundle; and a required result manifest.
+
+### Execution contract
+
+- API staging creates the experiment, queue job and one pending model run per requested algorithm in
+  one transaction. The definition has no update route after it is queued.
+- W0 supports E00, E01 and E10–E12. W1 remains visible in the typed contract but returns an explicit
+  conflict until a real weather source is available.
+- Every algorithm receives indexes from one feature matrix. Bounded parameter search uses only the
+  four 2009 folds and retains mean/std CV MAE plus fold and 24-horizon metrics.
+- Selection uses the documented 1% MAE and 5% standard-deviation boundaries, then prediction time and
+  simplicity. The worker records the recommendation before requesting 2010 indexes.
+- A failed model run retains its own error without removing other CV results. An experiment completes
+  only after the selected final metrics, bundle metadata and `experiment-result/v1` manifest exist.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_experiment_selection.py tests/unit/test_experiment_worker.py tests/unit/test_experiment_api.py -q` | exit 0; 10 passed in 13.26 s |
+| `backend` | `$env:TEST_DATABASE_URL=...; python -m uv run pytest tests/integration/test_experiment_repository.py -q` | exit 0; migration and transactional staging passed in 10.82 s |
+| `backend` | `python -m uv run pytest tests/unit -q` | exit 0; 126 passed in 41.85 s |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 317.9 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 118 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 109 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 169 collected, 2 performance tests deselected, 167 passed in 267.04 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+ADR-022 records the common-origin, pre-final-test selection and partial-failure decisions. Migration
+`c3d9a5f27410` adds result manifests and failure evidence and enforces the completed-manifest rule.

@@ -20,6 +20,7 @@ from energy_forecast.database import (
     SqlAlchemyAnalyticsRepository,
     SqlAlchemyArtifactMetadataRepository,
     SqlAlchemyDatasetCatalogRepository,
+    SqlAlchemyExperimentRepository,
     SqlAlchemyJobQueue,
     SqlAlchemyQualityRepository,
     SqlAlchemyTransformationRepository,
@@ -29,6 +30,8 @@ from energy_forecast.database import (
 from energy_forecast.datasets.api import create_dataset_router
 from energy_forecast.datasets.service import DatasetService
 from energy_forecast.errors import PROBLEM_MEDIA_TYPE, install_exception_handlers
+from energy_forecast.experiments.api import create_experiment_router
+from energy_forecast.experiments.service import ExperimentService
 from energy_forecast.health import (
     DatabaseReadinessCheck,
     MissingDatabaseReadinessCheck,
@@ -53,6 +56,7 @@ def create_app(
     quality_service: QualityService | None = None,
     transformation_service: TransformationService | None = None,
     analytics_service: AnalyticsService | None = None,
+    experiment_service: ExperimentService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
@@ -65,6 +69,7 @@ def create_app(
         resolved_quality_service,
         resolved_transformation_service,
         resolved_analytics_service,
+        resolved_experiment_service,
     ) = _default_application_services(
         resolved_settings,
         job_queue,
@@ -72,6 +77,7 @@ def create_app(
         quality_service,
         transformation_service,
         analytics_service,
+        experiment_service,
     )
 
     @asynccontextmanager
@@ -97,6 +103,7 @@ def create_app(
     application.include_router(create_quality_router(resolved_quality_service))
     application.include_router(create_transformation_router(resolved_transformation_service))
     application.include_router(create_analytics_router(resolved_analytics_service))
+    application.include_router(create_experiment_router(resolved_experiment_service))
     _install_openapi_contract(application)
     return application
 
@@ -108,6 +115,7 @@ def _default_application_services(
     quality_service: QualityService | None,
     transformation_service: TransformationService | None,
     analytics_service: AnalyticsService | None,
+    experiment_service: ExperimentService | None,
 ) -> tuple[
     AsyncEngine | None,
     JobQueue | None,
@@ -115,6 +123,7 @@ def _default_application_services(
     QualityService | None,
     TransformationService | None,
     AnalyticsService | None,
+    ExperimentService | None,
 ]:
     if settings.database_url is None:
         return (
@@ -124,6 +133,7 @@ def _default_application_services(
             quality_service,
             transformation_service,
             analytics_service,
+            experiment_service,
         )
     engine = create_database_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
@@ -137,6 +147,11 @@ def _default_application_services(
     resolved_analytics_service = analytics_service or AnalyticsService(
         SqlAlchemyAnalyticsRepository(session_factory)
     )
+    resolved_experiment_service = experiment_service or ExperimentService(
+        SqlAlchemyExperimentRepository(session_factory),
+        resolved_queue,
+        code_commit=settings.code_commit,
+    )
     if dataset_service is not None:
         return (
             engine,
@@ -145,6 +160,7 @@ def _default_application_services(
             resolved_quality_service,
             resolved_transformation_service,
             resolved_analytics_service,
+            resolved_experiment_service,
         )
     artifacts = ArtifactService(
         LocalArtifactStore(settings.artifact_root),
@@ -162,6 +178,7 @@ def _default_application_services(
         resolved_quality_service,
         resolved_transformation_service,
         resolved_analytics_service,
+        resolved_experiment_service,
     )
 
 

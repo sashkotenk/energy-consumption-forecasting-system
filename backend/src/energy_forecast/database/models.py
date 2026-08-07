@@ -530,6 +530,7 @@ class Experiment(Base):
         ),
         CheckConstraint("weather_mode IN ('W0', 'W1')"),
         CheckConstraint("forecast_horizon = 24"),
+        CheckConstraint("status <> 'completed' OR result_manifest IS NOT NULL"),
         Index("ix_experiments_version_created", "dataset_version_id", desc("created_at")),
         {"schema": "ml"},
     )
@@ -556,6 +557,9 @@ class Experiment(Base):
     environment_manifest: Mapped[dict[str, Any]] = mapped_column(
         JSON(), nullable=False, server_default=text("'{}'::jsonb")
     )
+    result_manifest: Mapped[dict[str, Any] | None] = mapped_column(JSON())
+    failure_code: Mapped[str | None] = mapped_column(String(80))
+    failure_detail: Mapped[str | None] = mapped_column(Text)
     final_test_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_timestamp()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -612,6 +616,8 @@ class ModelRun(Base):
     artifact_id: Mapped[UUID | None] = mapped_column(
         UUID_TYPE(as_uuid=True), ForeignKey("app.artifacts.id", ondelete="RESTRICT")
     )
+    failure_code: Mapped[str | None] = mapped_column(String(80))
+    failure_detail: Mapped[str | None] = mapped_column(Text)
     is_recommended: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )

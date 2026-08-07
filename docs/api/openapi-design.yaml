@@ -440,11 +440,11 @@ paths:
       tags: [Experiments]
       operationId: cancelExperiment
       responses:
-        "202":
+        "200":
           description: Cancellation requested
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/AcceptedJob"}
+              schema: {$ref: "#/components/schemas/Experiment"}
         "409": {$ref: "#/components/responses/Problem"}
 
   /forecasts:
@@ -1027,14 +1027,15 @@ components:
 
     AlgorithmDescriptor:
       type: object
-      required: [type, display_name, supports_weather]
+      required: [algorithm, display_name, implementation_version, supports_weather, default_search_space]
       properties:
-        type:
+        algorithm:
           type: string
           enum:
             [seasonal_naive_24, seasonal_naive_168, ridge,
              random_forest, hist_gradient_boosting]
         display_name: {type: string}
+        implementation_version: {type: string}
         supports_weather: {type: boolean}
         default_search_space: {type: object}
 
@@ -1052,8 +1053,7 @@ components:
     ExperimentCreate:
       type: object
       required:
-        [dataset_version_id, name, weather_mode, algorithms, feature_set,
-         split_definition, selection_rule]
+        [dataset_version_id, name, algorithms]
       properties:
         dataset_version_id: {type: string, format: uuid}
         name: {type: string, minLength: 1, maxLength: 160}
@@ -1061,14 +1061,13 @@ components:
         algorithms:
           type: array
           minItems: 1
-          items: {$ref: "#/components/schemas/AlgorithmSelection"}
-        feature_set: {type: string, enum: [base_v1, base_weather_v1]}
-        split_definition:
-          type: string
-          const: uci_2009_quarters_2010_test_v1
-        selection_rule:
-          type: string
-          const: selection_v1
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              [seasonal_naive_24, seasonal_naive_168, ridge,
+               random_forest, hist_gradient_boosting]
+        sensitivity_mode: {type: string, enum: [complete_only, coverage_90], default: complete_only}
 
     AcceptedExperiment:
       type: object
@@ -1105,20 +1104,22 @@ components:
     Experiment:
       type: object
       required:
-        [id, dataset_version_id, name, status, weather_mode, forecast_horizon, created_at]
+        [id, dataset_version_id, job_id, name, status, weather_mode, sensitivity_mode,
+         algorithms, created_at]
       properties:
         id: {type: string, format: uuid}
         dataset_version_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
         name: {type: string}
         status: {type: string}
         weather_mode: {type: string, enum: [W0, W1]}
-        forecast_horizon: {type: integer, const: 24}
-        feature_schema_version: {type: string}
-        split_definition: {type: object}
-        environment_manifest: {type: object}
-        model_runs:
+        sensitivity_mode: {type: string, enum: [complete_only, coverage_90]}
+        algorithms:
           type: array
-          items: {$ref: "#/components/schemas/ModelRun"}
+          items: {type: string}
+        result_manifest: {type: object, nullable: true}
+        failure_code: {type: string, nullable: true}
+        failure_detail: {type: string, nullable: true}
         created_at: {type: string, format: date-time}
         started_at: {type: string, format: date-time}
         finished_at: {type: string, format: date-time}
