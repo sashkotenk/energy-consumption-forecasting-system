@@ -78,7 +78,7 @@ jobs:
 
       - name: Install exact OpenAPI generator
         working-directory: frontend
-        run: npm install --save-dev --save-exact @hey-api/openapi-ts@0.97.0
+        run: npm install --save-dev --save-exact orval@8.23.0
 
       - name: Generate TypeScript SDK
         working-directory: frontend
@@ -86,7 +86,7 @@ jobs:
 
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit
 
       - name: Type check generated SDK
         working-directory: frontend
@@ -103,24 +103,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
           git add \
-            .github/workflows/ci.yml \
-            ARCHITECTURE.md \
-            README.md \
-            backend/src/energy_forecast/api.py \
-            backend/src/energy_forecast/experiments/api.py \
-            backend/src/energy_forecast/forecasting/api.py \
-            backend/src/energy_forecast/exports/api.py \
             backend/tests/unit/test_openapi_contract.py \
             docs/api/openapi.json \
-            docs/architecture/traceability.csv \
-            docs/implementation-log.md \
-            frontend/openapi-ts.config.ts \
-            frontend/package.json \
+            frontend/orval.config.ts \
             frontend/package-lock.json \
             frontend/src/generated/api \
-            scripts/export_openapi.py \
-            scripts/verify.ps1
+            scripts/export_openapi.py
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
