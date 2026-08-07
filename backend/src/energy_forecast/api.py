@@ -33,6 +33,8 @@ from energy_forecast.datasets.service import DatasetService
 from energy_forecast.errors import PROBLEM_MEDIA_TYPE, install_exception_handlers
 from energy_forecast.experiments.api import create_experiment_router
 from energy_forecast.experiments.service import ExperimentService
+from energy_forecast.exports.api import create_export_router
+from energy_forecast.exports.service import ExportService
 from energy_forecast.forecasting.api import create_forecast_router
 from energy_forecast.forecasting.service import ForecastService
 from energy_forecast.health import (
@@ -62,6 +64,7 @@ def create_app(
     analytics_service: AnalyticsService | None = None,
     experiment_service: ExperimentService | None = None,
     forecast_service: ForecastService | None = None,
+    export_service: ExportService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
@@ -76,6 +79,7 @@ def create_app(
         resolved_analytics_service,
         resolved_experiment_service,
         resolved_forecast_service,
+        resolved_export_service,
     ) = _default_application_services(
         resolved_settings,
         job_queue,
@@ -85,6 +89,7 @@ def create_app(
         analytics_service,
         experiment_service,
         forecast_service,
+        export_service,
     )
 
     @asynccontextmanager
@@ -112,6 +117,7 @@ def create_app(
     application.include_router(create_analytics_router(resolved_analytics_service))
     application.include_router(create_experiment_router(resolved_experiment_service))
     application.include_router(create_forecast_router(resolved_forecast_service))
+    application.include_router(create_export_router(resolved_export_service))
     _install_openapi_contract(application)
     return application
 
@@ -125,6 +131,7 @@ def _default_application_services(
     analytics_service: AnalyticsService | None,
     experiment_service: ExperimentService | None,
     forecast_service: ForecastService | None,
+    export_service: ExportService | None,
 ) -> tuple[
     AsyncEngine | None,
     JobQueue | None,
@@ -134,6 +141,7 @@ def _default_application_services(
     AnalyticsService | None,
     ExperimentService | None,
     ForecastService | None,
+    ExportService | None,
 ]:
     if settings.database_url is None:
         return (
@@ -145,6 +153,7 @@ def _default_application_services(
             analytics_service,
             experiment_service,
             forecast_service,
+            export_service,
         )
     engine = create_database_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
@@ -171,6 +180,11 @@ def _default_application_services(
         SqlAlchemyForecastRepository(session_factory),
         ModelBundleService(artifacts),
     )
+    resolved_export_service = export_service or ExportService(
+        resolved_forecast_service,
+        resolved_experiment_service,
+        artifacts,
+    )
     if dataset_service is not None:
         return (
             engine,
@@ -181,6 +195,7 @@ def _default_application_services(
             resolved_analytics_service,
             resolved_experiment_service,
             resolved_forecast_service,
+            resolved_export_service,
         )
     resolved_dataset_service = DatasetService(
         SqlAlchemyDatasetCatalogRepository(session_factory),
@@ -196,6 +211,7 @@ def _default_application_services(
         resolved_analytics_service,
         resolved_experiment_service,
         resolved_forecast_service,
+        resolved_export_service,
     )
 
 
