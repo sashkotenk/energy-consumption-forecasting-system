@@ -14,6 +14,7 @@ from energy_forecast.config import Service, Settings
 from energy_forecast.database import (
     SqlAlchemyArtifactMetadataRepository,
     SqlAlchemyDatasetImportRepository,
+    SqlAlchemyExperimentRepository,
     SqlAlchemyJobQueue,
     SqlAlchemyQualityRepository,
     SqlAlchemyTransformationRepository,
@@ -21,9 +22,11 @@ from energy_forecast.database import (
     create_session_factory,
 )
 from energy_forecast.datasets.importing import DatasetImportHandler
+from energy_forecast.experiments.handler import ExperimentHandler
 from energy_forecast.jobs.domain import JobType
 from energy_forecast.jobs.worker import JobHandlerRegistry, JobWorker
 from energy_forecast.logging_config import configure_logging
+from energy_forecast.ml.bundles import ModelBundleService
 from energy_forecast.quality.service import QualityService
 from energy_forecast.transformations.service import TransformationHandler
 
@@ -56,6 +59,13 @@ async def run_worker(settings: Settings, registry: JobHandlerRegistry | None = N
         resolved_registry.register(
             JobType.DATA_TRANSFORMATION,
             TransformationHandler(SqlAlchemyTransformationRepository(session_factory)),
+        )
+        resolved_registry.register(
+            JobType.EXPERIMENT,
+            ExperimentHandler(
+                SqlAlchemyExperimentRepository(session_factory),
+                ModelBundleService(artifacts),
+            ),
         )
     else:
         resolved_registry = registry

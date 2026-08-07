@@ -37,7 +37,11 @@ heatmap aggregates and SQL histograms. Responses enforce five-year and point-cou
 unit, timezone, coverage and quality metadata. The pure ML feature boundary constructs fixed lags,
 shifted rolling statistics, local calendar cycles, optional past-quality signals and direct
 24-output targets. It also owns the four expanding chronological folds, 24-hour purge and the
-separate final-test boundary. Training and forecast handlers remain deferred.
+separate final-test boundary. The experiment service stages immutable configuration and model runs in
+one transaction. Its worker evaluates every algorithm on the same eligible origins, persists fold
+and horizon metrics, applies the recorded recommendation rule before opening the 2010 final test,
+and requires a result manifest before completion. W1 remains represented but is rejected until a
+real weather dataset is connected. Forecast handlers remain deferred.
 The model foundation defines common trainer/predictor ports, a bounded algorithm registry, metrics,
 Seasonal Naive-24/-168 and an internal bundle lifecycle. Bundle loading checks artifact and payload
 checksums plus compatibility metadata before deserializing joblib bytes.
