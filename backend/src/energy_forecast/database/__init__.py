@@ -9,6 +9,7 @@ from energy_forecast.database.dataset_repository import (
 )
 from energy_forecast.database.import_repository import SqlAlchemyDatasetImportRepository
 from energy_forecast.database.job_queue import SqlAlchemyJobQueue
+from energy_forecast.database.quality_repository import SqlAlchemyQualityRepository
 from energy_forecast.database.session import (
     AsyncSessionFactory,
     create_database_engine,
@@ -23,6 +24,7 @@ __all__ = [
     "SqlAlchemyDatasetCatalogRepository",
     "SqlAlchemyDatasetImportRepository",
     "SqlAlchemyJobQueue",
+    "SqlAlchemyQualityRepository",
     "create_database_engine",
     "create_session_factory",
     "transactional_session",

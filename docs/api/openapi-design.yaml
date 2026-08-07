@@ -168,6 +168,11 @@ paths:
   /dataset-versions/{versionId}/quality:
     parameters:
       - {$ref: "#/components/parameters/VersionId"}
+      - name: report_version
+        in: query
+        schema: {type: integer, minimum: 1}
+      - {$ref: "#/components/parameters/Page"}
+      - {$ref: "#/components/parameters/PageSize"}
     get:
       tags: [Datasets]
       operationId: getDataQualityReport
@@ -686,19 +691,53 @@ components:
     DataQualityReport:
       type: object
       required:
-        [dataset_version_id, total_rows, missing_values, exact_duplicates,
-         conflicting_duplicates, gap_count, invalid_values]
+        [report_id, dataset_version_id, report_version, engine_version, summary,
+         items, page, page_size, total, created_at]
       properties:
+        report_id: {type: string, format: uuid}
         dataset_version_id: {type: string, format: uuid}
-        total_rows: {type: integer}
-        missing_values: {type: integer}
-        exact_duplicates: {type: integer}
-        conflicting_duplicates: {type: integer}
-        gap_count: {type: integer}
-        invalid_values: {type: integer}
-        coverage_summary: {type: object}
-        examples:
+        report_version: {type: integer, minimum: 1}
+        engine_version: {type: string, example: quality-engine/v1}
+        expected_interval_seconds: {type: [integer, "null"]}
+        summary:
+          type: object
+          example:
+            schema_version: data-quality-report/v1
+            total_rows: 1440
+            expected_interval_seconds: 60
+            missing_values: 3
+            exact_duplicates: 1
+            conflicting_duplicates: 0
+            gap_count: 1
+        items:
           type: array
+          items: {$ref: "#/components/schemas/DataQualityIssue"}
+        page: {type: integer}
+        page_size: {type: integer}
+        total: {type: integer}
+        created_at: {type: string, format: date-time}
+
+    DataQualityIssue:
+      type: object
+      required:
+        [id, issue_type, severity, range_start, range_end, occurrence_count,
+         column_name, evidence]
+      properties:
+        id: {type: integer}
+        issue_type:
+          type: string
+          enum:
+            [missing, non_finite, physical_invalidity, exact_duplicate,
+             conflicting_duplicate, time_gap, timestamp_order,
+             statistical_anomaly, timezone_ambiguity, parse_error]
+        severity: {type: string, enum: [info, warning, error]}
+        range_start: {type: [string, "null"], format: date-time}
+        range_end: {type: [string, "null"], format: date-time}
+        occurrence_count: {type: integer, minimum: 1}
+        column_name: {type: [string, "null"]}
+        evidence:
+          type: array
+          maxItems: 10
           items: {type: object}
 
     TransformationCreate:

@@ -281,11 +281,13 @@ class DataQualityIssue(Base):
     __tablename__ = "data_quality_issues"
     __table_args__ = (
         CheckConstraint(
-            "issue_type IN ('missing', 'exact_duplicate', 'conflicting_duplicate', "
-            "'time_gap', 'invalid_value', 'statistical_anomaly', "
-            "'timezone_ambiguity', 'parse_error')"
+            "issue_type IN ('missing', 'non_finite', 'physical_invalidity', "
+            "'exact_duplicate', 'conflicting_duplicate', 'time_gap', "
+            "'timestamp_order', 'statistical_anomaly', 'timezone_ambiguity', 'parse_error')"
         ),
         CheckConstraint("severity IN ('info', 'warning', 'error')"),
+        CheckConstraint("occurrence_count >= 1"),
+        CheckConstraint("range_end IS NULL OR observed_at IS NULL OR range_end >= observed_at"),
         Index("ix_quality_issues_version_type", "dataset_version_id", "issue_type"),
         Index(
             "ix_quality_issues_version_time",
@@ -302,14 +304,48 @@ class DataQualityIssue(Base):
         ForeignKey("app.dataset_versions.id", ondelete="CASCADE"),
         nullable=False,
     )
+    report_id: Mapped[UUID | None] = mapped_column(
+        UUID_TYPE(as_uuid=True), ForeignKey("app.data_quality_reports.id", ondelete="CASCADE")
+    )
     issue_type: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    range_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    occurrence_count: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, server_default=text("1")
+    )
     source_row_number: Mapped[int | None] = mapped_column(BigInteger)
     column_name: Mapped[str | None] = mapped_column(String(100))
     details: Mapped[dict[str, Any]] = mapped_column(
         JSON(), nullable=False, server_default=text("'{}'::jsonb")
     )
+    created_at: Mapped[datetime] = created_timestamp()
+
+
+class DataQualityReport(Base):
+    __tablename__ = "data_quality_reports"
+    __table_args__ = (
+        UniqueConstraint("dataset_version_id", "report_version"),
+        CheckConstraint("report_version >= 1"),
+        CheckConstraint("expected_interval_seconds IS NULL OR expected_interval_seconds > 0"),
+        Index(
+            "ix_quality_reports_version_latest",
+            "dataset_version_id",
+            desc("report_version"),
+        ),
+        {"schema": "app"},
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    dataset_version_id: Mapped[UUID] = mapped_column(
+        UUID_TYPE(as_uuid=True),
+        ForeignKey("app.dataset_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    report_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    engine_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    expected_interval_seconds: Mapped[int | None] = mapped_column(Integer)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON(), nullable=False)
     created_at: Mapped[datetime] = created_timestamp()
 
 
@@ -363,14 +399,6 @@ class RawMeasurement(Base):
     __table_args__ = (
         CheckConstraint("source_row_number >= 1"),
         CheckConstraint("interval_seconds IS NULL OR interval_seconds > 0"),
-        CheckConstraint("energy_kwh IS NULL OR energy_kwh >= 0"),
-        CheckConstraint("active_power_kw IS NULL OR active_power_kw >= 0"),
-        CheckConstraint("reactive_power_kw IS NULL OR reactive_power_kw >= 0"),
-        CheckConstraint("voltage_v IS NULL OR voltage_v > 0"),
-        CheckConstraint("current_a IS NULL OR current_a >= 0"),
-        CheckConstraint("sub_metering_1_wh IS NULL OR sub_metering_1_wh >= 0"),
-        CheckConstraint("sub_metering_2_wh IS NULL OR sub_metering_2_wh >= 0"),
-        CheckConstraint("sub_metering_3_wh IS NULL OR sub_metering_3_wh >= 0"),
         CheckConstraint("parse_status IN ('valid', 'warning', 'invalid')"),
         Index("ix_raw_version_time", "dataset_version_id", desc("observed_at")),
         {"schema": "ts"},

@@ -6,7 +6,7 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-07 adds streaming UCI and generic CSV ingestion on top of the dataset staging, persistence,
+TASK-08 adds deterministic data-quality evaluation on top of streaming ingestion, persistence,
 artifact, and job foundations:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
@@ -29,14 +29,17 @@ artifact, and job foundations:
 - fixed official-nine-column UCI parsing and explicitly mapped generic CSV parsing;
 - bounded structural preview, delimiter/decimal detection, timezone and target-unit normalization;
 - chunked raw-measurement inserts with source-row parse errors and restart-safe worker attempts;
+- versioned quality reports for order, interval, gaps, duplicates, missing/non-finite values,
+  physical invalidity and informational robust-z anomalies;
+- bounded, paginated quality issue evidence through the dataset-version API;
 - separate runnable API and worker processes from the same backend package;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Quality classification, controlled cleaning, hourly aggregation and ML pipelines remain assigned to
-later tasks. The request path still validates and stores the file without parsing millions of rows;
-the worker owns chunked normalization and commits only bounded batches.
+Controlled cleaning, hourly aggregation and ML pipelines remain assigned to later tasks. Raw invalid
+values and statistical peaks remain immutable evidence; quality evaluation classifies them without
+silently changing the imported source.
 
 ## Toolchain
 
