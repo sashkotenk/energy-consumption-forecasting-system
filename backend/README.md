@@ -77,6 +77,12 @@ and forecasting handlers are introduced with their application services.
 model payload checksum, feature schema, horizon, dataset/version policy and library major versions
 before calling `joblib.load`. Dataset upload routes never accept model files.
 
+`create_model` builds 24 direct estimators for Ridge, Random Forest or HistGradientBoosting. Ridge
+fits `StandardScaler` on the supplied training partition. The benchmark profile forces a single
+horizon worker and single native thread; the production profile configures horizon-level
+parallelism separately. `candidate_configurations` returns the fixed Ridge grid or at most 20
+seed-42 samples from the tree-model spaces.
+
 ## Dataset catalog and uploads
 
 Dataset CRUD uses short PostgreSQL transactions and reports dependent immutable versions/imports as

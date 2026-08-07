@@ -41,6 +41,10 @@ separate final-test boundary. Training and forecast handlers remain deferred.
 The model foundation defines common trainer/predictor ports, a bounded algorithm registry, metrics,
 Seasonal Naive-24/-168 and an internal bundle lifecycle. Bundle loading checks artifact and payload
 checksums plus compatibility metadata before deserializing joblib bytes.
+The three required ML implementations share a direct 24-regressor façade. Ridge owns a train-fitted
+scaler; Random Forest and HistGradientBoosting use the fixed seed and bounded protocol parameters.
+Benchmark execution limits native and horizon parallelism to one, while production parallelism is
+an explicit runtime profile.
 
 ## Intended system architecture
 

@@ -104,6 +104,7 @@ dependencies = [
     { name = "python-multipart" },
     { name = "scikit-learn" },
     { name = "sqlalchemy" },
+    { name = "threadpoolctl" },
     { name = "uvicorn" },
 ]
 
@@ -128,6 +129,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.22,<0.1" },
     { name = "scikit-learn", specifier = ">=1.7,<2" },
     { name = "sqlalchemy", specifier = ">=2.0,<3" },
+    { name = "threadpoolctl", specifier = ">=3.6,<4" },
     { name = "uvicorn", specifier = ">=0.35,<1" },
 ]
 
