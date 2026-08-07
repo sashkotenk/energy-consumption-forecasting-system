@@ -18,7 +18,14 @@ from energy_forecast.ml.features import (
     FeatureSchema,
 )
 from energy_forecast.ml.metrics import MetricSet, evaluate
+from energy_forecast.ml.models import (
+    DirectRegressionModel,
+    ExecutionProfile,
+    ModelRuntime,
+    create_model,
+)
 from energy_forecast.ml.registry import AlgorithmRegistry, AlgorithmType
+from energy_forecast.ml.search import candidate_configurations
 from energy_forecast.ml.splits import (
     SPLIT_DEFINITION_V1,
     ChronologicalSplitProtocol,
@@ -37,6 +44,8 @@ __all__ = [
     "BundleCompatibilityPolicy",
     "BundleManifestInput",
     "ChronologicalSplitProtocol",
+    "DirectRegressionModel",
+    "ExecutionProfile",
     "FeatureMatrix",
     "FeaturePipeline",
     "FeaturePipelineConfig",
@@ -46,8 +55,11 @@ __all__ = [
     "MetricSet",
     "ModelBundleManifest",
     "ModelBundleService",
+    "ModelRuntime",
     "SeasonalNaive",
     "TemporalFold",
+    "candidate_configurations",
+    "create_model",
     "evaluate",
     "prepare_fold",
 ]

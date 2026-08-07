@@ -13,11 +13,11 @@ The project can currently:
 - calculate summaries, profiles, heatmaps, distributions and bounded time series;
 - build leakage-safe lag, rolling and calendar features with direct 24-hour targets;
 - create the four chronological validation folds used by the ML experiments;
+- train direct Ridge, Random Forest and HistGradientBoosting models;
 - evaluate Seasonal Naive-24/-168 and save checksum-verified internal model bundles.
 
 The API is built with FastAPI, PostgreSQL and TimescaleDB. The frontend is still a small React/Vite
-shell. Ridge, Random Forest, gradient boosting and forecast endpoints are the next parts of the
-project.
+shell. Experiment orchestration and forecast endpoints are the next parts of the project.
 
 ## Toolchain
 

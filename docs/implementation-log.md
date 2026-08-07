@@ -802,3 +802,49 @@ origins; and checksum-verified internal bundle save/load through the existing ar
 
 ADR-020 records the internal trust boundary and validation order. No new endpoint, table or migration
 is required; model metadata continues to use the existing `ml.model_runs` and `app.artifacts` design.
+
+## TASK-13 — Ridge, Random Forest and HistGradientBoosting
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** direct 24-regressor implementations of the three required ML algorithms; Ridge train-only
+scaling; protocol-bounded parameters and deterministic candidates; disabled random HGB validation;
+separate benchmark/production parallel profiles; joblib round trips; and reproducible timing/size
+measurement.
+
+### Model execution contract
+
+- All three algorithms fit one estimator for each horizon and return `(n_origins, 24)`.
+- Ridge fits its scaler only from the matrix passed to `fit`. Tree models receive no hidden
+  preprocessing.
+- The benchmark profile uses one horizon job and limits native thread pools to one. Every forest also
+  uses `n_jobs=1`, avoiding nested parallelism. Production horizon parallelism is explicit.
+- HistGradientBoosting always uses `early_stopping=false`; unsupported parameters are rejected before
+  estimator construction.
+- Benchmark measurement performs one warm-up, three timed fits, one prediction warm-up and 30 timed
+  predictions, then records median/p95 time and serialized bytes.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv lock` | exit 0; 47 packages resolved; direct `threadpoolctl` requirement added without a version change |
+| `backend` | `python -m uv run pytest tests\\unit\\test_ml_models.py -q` | exit 0; 11 passed in 26.07 s |
+| `backend` | `python -m uv run ruff check src\\energy_forecast\\ml tests\\unit\\test_ml_models.py` | exit 0; all checks passed |
+| `backend` | `python -m uv run mypy src\\energy_forecast\\ml tests\\unit\\test_ml_models.py` | exit 0; no issues in 12 source files |
+| repository root | `.\\scripts\\verify.ps1` | exit 0 in 285.2 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 105 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 97 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 158 collected, 2 performance tests deselected, 156 passed in 242.09 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+ADR-021 records the direct-model, early-stopping and execution-profile choices. No API, database table
+or migration changes are required for the estimator layer.
