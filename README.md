@@ -22,7 +22,9 @@ The project can currently:
 
 The API is built with FastAPI, PostgreSQL and TimescaleDB. Its OpenAPI 3.1 document is exported
 deterministically and generates the committed TypeScript SDK under `frontend/src/generated/api`. The
-frontend is still a small React/Vite shell; the product pages and experiment/forecast UI remain next.
+React/Vite frontend now provides Ukrainian workflows for dataset import and analysis, experiment
+creation and terminal-state handling, baseline model comparison, 24-hour forecast review and
+controlled exports.
 
 ## Toolchain
 
@@ -82,7 +84,7 @@ npm run test -- --run
 npm run build
 ```
 
-The starter interface and user-facing text are Ukrainian, while code and technical documentation use English.
+The user-facing interface and text are Ukrainian, while code and technical documentation use English.
 
 ## Run all checks
 
