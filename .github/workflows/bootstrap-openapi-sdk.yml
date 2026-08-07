@@ -40,6 +40,7 @@ jobs:
         run: |
           python scripts/prepare_task17.py
           python scripts/prepare_task17_problem_schema.py
+          python scripts/prepare_task17_codegen_version.py
 
       - name: Install backend dependencies
         working-directory: backend
@@ -77,11 +78,7 @@ jobs:
 
       - name: Install exact OpenAPI generator
         working-directory: frontend
-        run: npm install --save-dev --save-exact @hey-api/openapi-ts@0.99.0
-
-      - name: Capture dependency audit details
-        working-directory: frontend
-        run: npm audit --json || true
+        run: npm install --save-dev --save-exact @hey-api/openapi-ts@0.97.0
 
       - name: Generate TypeScript SDK
         working-directory: frontend
