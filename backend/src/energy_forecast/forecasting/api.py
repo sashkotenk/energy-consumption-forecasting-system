@@ -75,6 +75,7 @@ def create_forecast_router(service: ForecastService | None) -> APIRouter:
 
     @router.post(
         "",
+        operation_id="createForecast",
         status_code=HTTPStatus.CREATED,
         response_model=ForecastResponse,
         responses={
@@ -122,7 +123,7 @@ def create_forecast_router(service: ForecastService | None) -> APIRouter:
             ) from error
         return ForecastResponse.model_validate(record)
 
-    @router.get("", response_model=ForecastPageResponse)
+    @router.get("", operation_id="listForecasts", response_model=ForecastPageResponse)
     async def list_forecasts(
         page: PageNumber = 1, page_size: PageSize = 20
     ) -> ForecastPageResponse:
@@ -136,6 +137,7 @@ def create_forecast_router(service: ForecastService | None) -> APIRouter:
 
     @router.get(
         "/{forecastId}",
+        operation_id="getForecast",
         response_model=ForecastResponse,
         responses={HTTPStatus.NOT_FOUND: _PROBLEM},
     )

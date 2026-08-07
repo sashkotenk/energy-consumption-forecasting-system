@@ -54,7 +54,9 @@ def main() -> int:
 
     current = export_openapi(args.output, check=args.check)
     if args.check and not current:
-        print("OpenAPI drift detected. Run: cd backend && uv run python ../scripts/export_openapi.py")
+        print(
+            "OpenAPI drift detected. Run: cd backend && uv run python ../scripts/export_openapi.py"
+        )
         return 1
     if args.check:
         print("OpenAPI contract is synchronized.")

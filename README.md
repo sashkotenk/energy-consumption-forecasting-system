@@ -20,8 +20,9 @@ The project can currently:
 - export forecast CSV and chart-ready JSON plus experiment metrics/manifest data as checksum-tracked
   artifacts, then download only export-purpose artifacts through a controlled endpoint.
 
-The API is built with FastAPI, PostgreSQL and TimescaleDB. The frontend is still a small React/Vite
-shell. The experiment/forecast UI and generated API client are the next parts of the project.
+The API is built with FastAPI, PostgreSQL and TimescaleDB. Its OpenAPI 3.1 document is exported
+deterministically and generates the committed TypeScript SDK under `frontend/src/generated/api`. The
+frontend is still a small React/Vite shell; the product pages and experiment/forecast UI remain next.
 
 ## Toolchain
 
@@ -74,6 +75,7 @@ npm run dev
 Frontend verification:
 
 ```bash
+npm run api:check
 npm run lint
 npm run typecheck
 npm run test -- --run
@@ -137,7 +139,9 @@ python -m uv run --env-file ../.env energy-forecast-worker
 ## Architecture and contracts
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — implemented architecture snapshot;
-- [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design-time OpenAPI contract;
+- [`docs/api/openapi.json`](docs/api/openapi.json) — authoritative exported runtime OpenAPI 3.1 contract;
+- [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design reference retained for planned-contract traceability;
+- [`frontend/src/generated/api/`](frontend/src/generated/api/) — generated TypeScript SDK; never edit generated files manually;
 - [`docs/database/schema-design.sql`](docs/database/schema-design.sql) — design-time PostgreSQL/TimescaleDB schema;
 - [`docs/diagrams/`](docs/diagrams/) — C4, UML, sequence, ER, deployment, and ML diagrams;
 - [`docs/sad/SAD_draft_v0.1.md`](docs/sad/SAD_draft_v0.1.md) — draft Software Architecture Document;

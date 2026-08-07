@@ -9,7 +9,7 @@ still pending beyond the starter shell.
 ```text
 repository
 ├── backend     FastAPI/worker boundaries, SQLAlchemy models, Alembic and tests
-├── frontend    Vite React TypeScript shell and unit smoke test
+├── frontend    Vite React TypeScript shell, generated API SDK and unit smoke test
 ├── docs        design contracts, ADRs and implementation evidence
 └── CI          backend with TimescaleDB plus independent frontend verification
 ```
@@ -88,24 +88,29 @@ and artifact ports rather than FastAPI or storage paths. The local filesystem an
 remain replaceable infrastructure details. Handler code depends on a job execution context rather
 than directly on FastAPI or a SQLAlchemy session.
 
-The planned frontend dependency direction is:
+The frontend dependency direction is:
 
 ```text
 app/pages/widgets → features/entities/shared → generated API client
 ```
 
+FastAPI runtime OpenAPI 3.1 is exported deterministically to `docs/api/openapi.json`. The pinned
+OpenAPI generator consumes that artifact and writes `frontend/src/generated/api`; generated files are
+not edited by hand. CI regenerates both layers and rejects drift before frontend compilation.
+
 Server state belongs in TanStack Query, form state in React Hook Form and Zod, route state in URL parameters, and local presentation state in React. A global mutable store is not part of the baseline.
 
 ## Authoritative technical baselines
 
-- `docs/api/openapi-design.yaml`
+- `docs/api/openapi.json` — authoritative implemented API contract
+- `docs/api/openapi-design.yaml` — design reference for planned contract traceability
 - `docs/database/schema-design.sql`
 - `docs/diagrams/`
 - `docs/sad/SAD_draft_v0.1.md`
 - `docs/architecture/adr/README.md`
 - `docs/architecture/traceability.csv`
 
-These documents describe planned and implemented components. Runtime OpenAPI for implemented routes, Alembic migrations, passing tests, and recorded ADRs supersede remaining design assumptions. Any deviation must be documented in the same change that introduces it.
+The exported runtime OpenAPI is authoritative for implemented routes and generated frontend types. Alembic migrations, passing tests, and recorded ADRs likewise supersede remaining design assumptions. Any deviation must be documented in the same change that introduces it.
 
 ## Reproducibility and safety constraints
 
