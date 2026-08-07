@@ -3,15 +3,16 @@
 ## Implemented snapshot
 
 The repository implements the backend flow from ingestion and quality processing through analytics,
-ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product flow is
-still pending beyond the starter shell.
+ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product core is
+implemented through dataset ingestion, data-quality review and bounded analytics views; experiment and
+forecast product pages remain assigned to the next feature task.
 
 ```text
 repository
 ├── backend     FastAPI/worker boundaries, SQLAlchemy models, Alembic and tests
-├── frontend    Vite React TypeScript shell, generated API SDK and unit smoke test
+├── frontend    React Router SPA, TanStack Query, generated API SDK, ECharts and component tests
 ├── docs        design contracts, ADRs and implementation evidence
-└── CI          backend with TimescaleDB plus independent frontend verification
+└── CI          backend, frontend and repository-wide verification gates
 ```
 
 The backend exposes FastAPI liveness/readiness endpoints, typed settings, structured JSON logging,
@@ -60,6 +61,15 @@ The three required ML implementations share a direct 24-regressor façade. Ridge
 scaler; Random Forest and HistGradientBoosting use the fixed seed and bounded protocol parameters.
 Benchmark execution limits native and horizon parallelism to one, while production parallelism is
 an explicit runtime profile.
+
+The frontend now follows the documented `app/pages/shared/generated` dependency direction. `AppShell`
+provides keyboard-accessible navigation and route composition; TanStack Query owns server state and a
+bounded polling hook stops on terminal job states; React Hook Form plus Zod own import-form state and
+validation. The generated TypeScript SDK is configured once in `shared/api/client.ts` and no API DTOs
+are duplicated by hand. Dashboard, dataset catalog/details, the eight-step import wizard, data-quality
+review and bounded analytics routes call that SDK. Analytics charts are rendered through a reusable
+ECharts wrapper that disposes chart instances on cleanup and provides textual or tabular alternatives.
+Loading, empty and error states are shared Ukrainian UI components rather than page-local conventions.
 
 ## Intended system architecture
 
