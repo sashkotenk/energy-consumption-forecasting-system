@@ -109,7 +109,7 @@ def test_metrics_csv_is_normalized_stable_and_formula_safe() -> None:
     comparison = (
         {
             "model_run_id": str(_MODEL_RUN_ID),
-            "algorithm": "=HYPERLINK(\"https://example.invalid\")",
+            "algorithm": '=HYPERLINK("https://example.invalid")',
             "status": "completed",
             "hyperparameters": {"alpha": "+1"},
             "mean_cv_mae": 0.2,
@@ -142,7 +142,7 @@ def test_metrics_csv_is_normalized_stable_and_formula_safe() -> None:
     assert tuple(rows[0]) == METRICS_CSV_COLUMNS
     assert [row[6] for row in rows[1:]] == ["summary", "fold", "horizon"]
     assert all(row[2].startswith("'=") for row in rows[1:])
-    assert "\"alpha\":\"+1\"" in rows[1][5]
+    assert '"alpha":"+1"' in rows[1][5]
 
 
 def test_json_exports_are_utf8_and_chart_ready() -> None:
