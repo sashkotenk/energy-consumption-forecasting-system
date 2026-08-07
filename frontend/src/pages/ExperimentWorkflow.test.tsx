@@ -13,6 +13,7 @@ import {
   type JobResponse,
 } from '../generated/api/models'
 import { api } from '../shared/api/client'
+import { ExperimentBuilderPage } from './ExperimentBuilderPage'
 import { ExperimentDetailsPage } from './ExperimentDetailsPage'
 import { ExperimentsPage } from './ExperimentsPage'
 
@@ -81,6 +82,24 @@ describe('experiment workflow states', () => {
     render(<QueryClientProvider client={client()}><MemoryRouter><ExperimentsPage /></MemoryRouter></QueryClientProvider>)
     expect(await screen.findByRole('heading', { name: 'Експериментів ще немає' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Створити експеримент' })).toHaveAttribute('href', '/experiments/new')
+  })
+
+  it('always includes Seasonal Naive-24 in a submitted experiment', async () => {
+    vi.spyOn(api.experiments, 'listAlgorithms').mockResolvedValue([])
+    const create = vi.spyOn(api.experiments, 'createExperiment').mockResolvedValue({ experimentId: 'exp-new', jobId: 'job-new', status: ExperimentStatus.Queued })
+    render(
+      <QueryClientProvider client={client()}>
+        <MemoryRouter initialEntries={['/experiments/new?datasetVersionId=version-1']}>
+          <ExperimentBuilderPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Новий експеримент' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Запустити експеримент' }))
+    await waitFor(() => expect(create).toHaveBeenCalled())
+    const request = create.mock.calls[0]?.[0]
+    expect(request?.experimentCreate.algorithms).toContain(AlgorithmType.SeasonalNaive24)
+    expect(request?.experimentCreate.weatherMode).toBe(WeatherMode.W0)
   })
 
   it('shows failure details and retries the persisted job', async () => {
