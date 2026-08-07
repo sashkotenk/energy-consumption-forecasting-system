@@ -23,5 +23,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-017 | Immutable hourly transformation versions | partial energy is unscaled; missing hours remain distinguishable from zero |
 | ADR-018 | Bounded server-side analytics | version/range indexes and adaptive buckets keep browser payloads bounded |
 | ADR-019 | Leakage-safe feature and split protocol | shifted features, purged folds and final-test isolation are fixed contracts |
+| ADR-020 | Verified internal model bundles | compatibility and two checksums are verified before trusted joblib load |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.

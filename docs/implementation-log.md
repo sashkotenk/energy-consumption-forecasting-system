@@ -757,3 +757,48 @@ hook for every fold.
 
 ADR-019 records the feature timing, purge, final-test isolation and schema identity decisions. No API,
 database schema or migration changes are required for this pure domain layer.
+
+## TASK-12 — Model registry, metrics, bundles and seasonal baseline
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** trainer/predictor ports; the five-algorithm registry and bounded default search spaces;
+MAE, RMSE, sMAPE, per-horizon MAE and relative improvement; Seasonal Naive-24/-168 on caller-owned
+origins; and checksum-verified internal bundle save/load through the existing artifact boundary.
+
+### Registry, baseline and bundle contract
+
+- Seasonal baselines never manufacture missing history and return `(n_origins, 24)` for the exact
+  origins supplied by the evaluation pipeline.
+- sMAPE assigns zero contribution to a zero/zero pair. Relative improvement is explicitly undefined
+  when a zero-error baseline is compared with a nonzero-error model.
+- `model-bundle/v1` records the algorithm, implementation, horizon, complete feature identity,
+  dataset version, split, commit, seed, parameters, quality/weather modes, dependency versions and
+  model-payload SHA-256.
+- Loading accepts only an artifact persisted as the internal model-bundle purpose/media type. The
+  outer artifact checksum, manifest schema, model checksum and compatibility policy are validated
+  before `joblib.load`.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests\\unit\\test_ml_metrics_baselines_registry.py tests\\integration\\test_model_bundles.py -q` | exit 0; 14 passed in 0.94 s |
+| `backend` | `python -m uv run ruff check src\\energy_forecast\\ml tests\\unit\\test_ml_metrics_baselines_registry.py tests\\integration\\test_model_bundles.py src\\energy_forecast\\artifacts\\service.py` | exit 0; all checks passed |
+| `backend` | `python -m uv run mypy src\\energy_forecast\\ml tests\\unit\\test_ml_metrics_baselines_registry.py tests\\integration\\test_model_bundles.py` | exit 0; no issues in 10 source files |
+| repository root | `.\\scripts\\verify.ps1` | exit 0 in 260.0 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 101 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 93 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 147 collected, 2 performance tests deselected, 145 passed in 217.93 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+ADR-020 records the internal trust boundary and validation order. No new endpoint, table or migration
+is required; model metadata continues to use the existing `ml.model_runs` and `app.artifacts` design.

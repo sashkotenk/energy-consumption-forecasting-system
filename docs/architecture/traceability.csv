@@ -3,14 +3,14 @@ FR-01,Dataset Catalog and Ingestion Service,datasets dataset_versions dataset_im
 FR-02,Data Quality Engine,data_quality_reports data_quality_issues,/dataset-versions/{versionId}/quality,deterministic quality unit; persistence pagination and API integration
 FR-03,Transformation Pipeline,transformation_runs dataset_versions hourly_observations,/dataset-versions/{versionId}/transformations,energy integration and gap unit; API job worker TimescaleDB E2E
 FR-04,Analytics Query,hourly_observations,/dataset-versions/{versionId}/analytics/*,known-summary and bounded-series API integration; indexed range plan; performance smoke
-FR-05,Feature Pipeline and Experiment Service,experiments model_runs,experiments,15 leakage guard tests; experiment integration pending
+FR-05,Feature Pipeline ML Registry and Experiment Service,experiments model_runs,experiments,leakage guards metrics baselines and bundle integration; experiment orchestration pending
 FR-06,Comparison Query,fold_metrics horizon_metrics,comparison,API UI
 FR-07,Forecast Service,forecasts forecast_points,forecasts,ML E2E
 FR-08,Export and Artifact Service,artifacts,exports,security E2E
 FR-09,Dataset Catalog,datasets dataset_versions,dataset CRUD and pagination,API and PostgreSQL integration
 FR-10,FastAPI and OpenAPI,none,/api/v1,contract
 NFR-01,Configuration logging and health,none,/health/live and /health/ready,unit API contract
-NFR-02,Manifests and checksums,JSONB and SHA-256,detail endpoints,artifact checksum integration; deterministic feature schema hash tests
+NFR-02,Manifests and checksums,JSONB and SHA-256,detail endpoints,artifact and model-bundle checksum integration; feature schema hash tests
 NFR-03,PostgreSQL Job Queue,jobs job_attempts,/jobs enqueue poll cancel retry,state transition unit; queue concurrency recovery worker process integration
 NFR-04,Module boundaries,none,none,architecture import checks
 NFR-05,Docker Compose,volumes,future service health wiring,compose smoke
