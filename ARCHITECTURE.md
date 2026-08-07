@@ -2,8 +2,8 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-10 analytics boundary, not the complete business
-system described by the design documents.
+The repository implements the ingestion, quality, transformation, analytics and feature-building
+parts of the planned system. Model training and forecasting are not implemented yet.
 
 ```text
 repository
@@ -34,7 +34,10 @@ interval power without scaling incomplete hours, and persists quality-labelled h
 TimescaleDB through restart-safe batches. The analytics boundary performs version-scoped indexed
 range queries, descriptive statistics, deterministic adaptive UTC bucketing, local-time profiles,
 heatmap aggregates and SQL histograms. Responses enforce five-year and point-count bounds and retain
-unit, timezone, coverage and quality metadata. All ML handlers remain deferred.
+unit, timezone, coverage and quality metadata. The pure ML feature boundary constructs fixed lags,
+shifted rolling statistics, local calendar cycles, optional past-quality signals and direct
+24-output targets. It also owns the four expanding chronological folds, 24-hour purge and the
+separate final-test boundary. Training and forecast handlers remain deferred.
 
 ## Intended system architecture
 

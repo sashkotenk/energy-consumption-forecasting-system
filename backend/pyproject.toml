@@ -51,6 +51,7 @@ addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
 markers = [
     "integration: requires a real PostgreSQL/TimescaleDB server",
+    "ml_guard: mandatory time-series leakage and reproducibility checks",
     "performance: deterministic local smoke benchmark",
 ]
 
