@@ -288,6 +288,7 @@ CREATE TABLE ts.hourly_observations (
     tsdb.create_default_indexes = false
 );
 
+-- Covers version-scoped analytics ranges and deterministic chronological reads.
 CREATE INDEX ix_hourly_version_time
     ON ts.hourly_observations (dataset_version_id, hour_start DESC);
 

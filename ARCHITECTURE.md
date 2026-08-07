@@ -2,7 +2,7 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-09 transformation boundary, not the complete business
+The repository currently implements the TASK-10 analytics boundary, not the complete business
 system described by the design documents.
 
 ```text
@@ -31,7 +31,10 @@ and queued job together; failed staging compensates by deleting the unreferenced
 imports produce versioned quality evidence. Accepted transformations atomically create a child
 version, run and job. The worker applies the recorded duplicate/interpolation policy, integrates
 interval power without scaling incomplete hours, and persists quality-labelled hourly facts in
-TimescaleDB through restart-safe batches. Analytics and all ML handlers remain deferred.
+TimescaleDB through restart-safe batches. The analytics boundary performs version-scoped indexed
+range queries, descriptive statistics, deterministic adaptive UTC bucketing, local-time profiles,
+heatmap aggregates and SQL histograms. Responses enforce five-year and point-count bounds and retain
+unit, timezone, coverage and quality metadata. All ML handlers remain deferred.
 
 ## Intended system architecture
 

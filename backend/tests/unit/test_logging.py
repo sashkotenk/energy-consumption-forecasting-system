@@ -33,3 +33,15 @@ def test_json_log_contains_required_context(capsys: Any) -> None:
     assert payload["job_id"] == "job-456"
     assert payload["duration_ms"] == 12.5
     assert payload["error_code"] is None
+
+
+def test_configure_logging_reenables_package_loggers() -> None:
+    package_logger = logging.getLogger("energy_forecast.test.disabled")
+    package_logger.disabled = True
+    package_logger.addHandler(logging.NullHandler())
+
+    configure_logging(Settings(environment=Environment.TEST, service=Service.API))
+
+    assert package_logger.disabled is False
+    assert package_logger.handlers == []
+    assert package_logger.propagate is True

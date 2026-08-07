@@ -207,6 +207,8 @@ paths:
   /dataset-versions/{versionId}/analytics/summary:
     parameters:
       - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
     get:
       tags: [Analytics]
       operationId: getAnalyticsSummary
@@ -216,6 +218,27 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/AnalyticsSummary"}
+              example:
+                dataset_version_id: d8f732d9-cb6b-4f87-bb4e-c450f5953750
+                from: "2026-01-01T00:00:00Z"
+                to: "2026-01-02T00:00:00Z"
+                timezone: Europe/Kyiv
+                unit: kWh
+                expected_hours: 24
+                stored_hours: 24
+                energy_value_count: 23
+                absent_hours: 0
+                missing_energy_hours: 1
+                mean_energy_kwh: 1.2
+                median_energy_kwh: 1.1
+                min_energy_kwh: 0.4
+                max_energy_kwh: 2.8
+                total_energy_kwh: 27.6
+                mean_coverage_ratio: 0.98
+                status_counts: {complete: 23, invalid_missing: 1}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
 
   /dataset-versions/{versionId}/analytics/series:
     parameters:
@@ -244,6 +267,99 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/EnergySeries"}
+              example:
+                dataset_version_id: d8f732d9-cb6b-4f87-bb4e-c450f5953750
+                from: "2026-01-01T00:00:00Z"
+                to: "2026-01-02T00:00:00Z"
+                timezone: Europe/Kyiv
+                unit: kWh
+                requested_resolution: hour
+                bucket_seconds: 3600
+                downsampled: false
+                max_points: 2000
+                points:
+                  - timestamp: "2026-01-01T00:00:00Z"
+                    energy_kwh: 1.25
+                    mean_coverage_ratio: 1.0
+                    quality_status: complete
+                    sample_count: 1
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/analytics/hourly-profile:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
+    get:
+      tags: [Analytics]
+      operationId: getHourlyProfile
+      responses:
+        "200":
+          description: Local hour-of-day energy profile
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AnalyticsProfile"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/analytics/weekday-profile:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
+    get:
+      tags: [Analytics]
+      operationId: getWeekdayProfile
+      responses:
+        "200":
+          description: Local ISO-weekday energy profile
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AnalyticsProfile"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/analytics/heatmap:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
+    get:
+      tags: [Analytics]
+      operationId: getEnergyHeatmap
+      responses:
+        "200":
+          description: Heatmap-ready local weekday/hour aggregates
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnergyHeatmap"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /dataset-versions/{versionId}/analytics/distribution:
+    parameters:
+      - {$ref: "#/components/parameters/VersionId"}
+      - {$ref: "#/components/parameters/From"}
+      - {$ref: "#/components/parameters/To"}
+      - name: bins
+        in: query
+        schema: {type: integer, minimum: 5, maximum: 100, default: 20}
+    get:
+      tags: [Analytics]
+      operationId: getEnergyDistribution
+      responses:
+        "200":
+          description: Server-side energy histogram
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnergyDistribution"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
         "422": {$ref: "#/components/responses/Problem"}
 
   /algorithms:
@@ -525,10 +641,12 @@ components:
     From:
       name: from
       in: query
+      required: true
       schema: {type: string, format: date-time}
     To:
       name: to
       in: query
+      required: true
       schema: {type: string, format: date-time}
 
   responses:
@@ -771,33 +889,141 @@ components:
 
     AnalyticsSummary:
       type: object
+      required:
+        [dataset_version_id, from, to, timezone, unit, expected_hours,
+         stored_hours, energy_value_count, absent_hours, missing_energy_hours,
+         status_counts]
       properties:
-        count: {type: integer}
-        start: {type: string, format: date-time}
-        end: {type: string, format: date-time}
-        mean_energy_kwh: {type: number}
-        median_energy_kwh: {type: number}
-        min_energy_kwh: {type: number}
-        max_energy_kwh: {type: number}
-        total_energy_kwh: {type: number}
-        missing_hours: {type: integer}
+        dataset_version_id: {type: string, format: uuid}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string, example: Europe/Kyiv}
+        unit: {type: string, const: kWh}
+        expected_hours: {type: integer, minimum: 1}
+        stored_hours: {type: integer, minimum: 0}
+        energy_value_count: {type: integer, minimum: 0}
+        absent_hours: {type: integer, minimum: 0}
+        missing_energy_hours: {type: integer, minimum: 0}
+        mean_energy_kwh: {type: [number, "null"]}
+        median_energy_kwh: {type: [number, "null"]}
+        min_energy_kwh: {type: [number, "null"]}
+        max_energy_kwh: {type: [number, "null"]}
+        total_energy_kwh: {type: [number, "null"]}
+        mean_coverage_ratio: {type: [number, "null"], minimum: 0, maximum: 1}
+        status_counts:
+          type: object
+          additionalProperties: {type: integer, minimum: 0}
 
     EnergyPoint:
       type: object
-      required: [timestamp, energy_kwh]
+      required:
+        [timestamp, energy_kwh, mean_coverage_ratio, quality_status, sample_count]
       properties:
         timestamp: {type: string, format: date-time}
-        energy_kwh: {type: number}
+        energy_kwh: {type: [number, "null"]}
+        mean_coverage_ratio: {type: number, minimum: 0, maximum: 1}
         quality_status: {type: string}
+        sample_count: {type: integer, minimum: 1}
 
     EnergySeries:
       type: object
-      required: [resolution, points]
+      required:
+        [dataset_version_id, from, to, timezone, unit, requested_resolution,
+         bucket_seconds, downsampled, max_points, points]
       properties:
-        resolution: {type: string}
+        dataset_version_id: {type: string, format: uuid}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string}
+        unit: {type: string, const: kWh}
+        requested_resolution: {type: string, enum: [hour, day, week]}
+        bucket_seconds: {type: integer, minimum: 3600}
+        downsampled: {type: boolean}
+        max_points: {type: integer, minimum: 100, maximum: 10000}
         points:
           type: array
           items: {$ref: "#/components/schemas/EnergyPoint"}
+
+    ProfilePoint:
+      type: object
+      required:
+        [key, label, mean_energy_kwh, total_energy_kwh,
+         mean_coverage_ratio, sample_count]
+      properties:
+        key: {type: integer}
+        label: {type: string}
+        mean_energy_kwh: {type: number}
+        total_energy_kwh: {type: number}
+        mean_coverage_ratio: {type: number, minimum: 0, maximum: 1}
+        sample_count: {type: integer, minimum: 1}
+
+    AnalyticsProfile:
+      type: object
+      required: [dataset_version_id, from, to, timezone, unit, profile, points]
+      properties:
+        dataset_version_id: {type: string, format: uuid}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string}
+        unit: {type: string, const: kWh}
+        profile: {type: string, enum: [hour_of_day, iso_weekday]}
+        points:
+          type: array
+          items: {$ref: "#/components/schemas/ProfilePoint"}
+
+    HeatmapPoint:
+      type: object
+      required:
+        [iso_weekday, hour, mean_energy_kwh, mean_coverage_ratio, sample_count]
+      properties:
+        iso_weekday: {type: integer, minimum: 1, maximum: 7}
+        hour: {type: integer, minimum: 0, maximum: 23}
+        mean_energy_kwh: {type: number}
+        mean_coverage_ratio: {type: number, minimum: 0, maximum: 1}
+        sample_count: {type: integer, minimum: 1}
+
+    EnergyHeatmap:
+      type: object
+      required: [dataset_version_id, from, to, timezone, unit, dimensions, points]
+      properties:
+        dataset_version_id: {type: string, format: uuid}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string}
+        unit: {type: string, const: kWh}
+        dimensions:
+          type: array
+          prefixItems:
+            - {type: string, const: iso_weekday}
+            - {type: string, const: hour}
+          minItems: 2
+          maxItems: 2
+        points:
+          type: array
+          items: {$ref: "#/components/schemas/HeatmapPoint"}
+
+    DistributionBin:
+      type: object
+      required: [bin_index, lower_kwh, upper_kwh, sample_count]
+      properties:
+        bin_index: {type: integer, minimum: 1}
+        lower_kwh: {type: number}
+        upper_kwh: {type: number}
+        sample_count: {type: integer, minimum: 1}
+
+    EnergyDistribution:
+      type: object
+      required: [dataset_version_id, from, to, timezone, unit, requested_bins, bins]
+      properties:
+        dataset_version_id: {type: string, format: uuid}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string}
+        unit: {type: string, const: kWh}
+        requested_bins: {type: integer, minimum: 5, maximum: 100}
+        bins:
+          type: array
+          items: {$ref: "#/components/schemas/DistributionBin"}
 
     AlgorithmDescriptor:
       type: object

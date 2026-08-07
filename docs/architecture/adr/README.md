@@ -21,5 +21,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-015 | Import timezone and restart policy | explicit UCI timezone assumption; partial attempts are never valid |
 | ADR-016 | Quality evidence and report versioning | raw invalid values are retained; reports are immutable and paginated |
 | ADR-017 | Immutable hourly transformation versions | partial energy is unscaled; missing hours remain distinguishable from zero |
+| ADR-018 | Bounded server-side analytics | version/range indexes and adaptive buckets keep browser payloads bounded |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.
