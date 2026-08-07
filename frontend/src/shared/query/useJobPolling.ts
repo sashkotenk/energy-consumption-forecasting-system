@@ -13,12 +13,19 @@ export function isTerminalJob(status?: string | null) {
   return status ? terminal.has(status) : false
 }
 
+export function nextJobPollDelay(updateCount: number) {
+  return Math.min(5_000, 1_000 * 2 ** Math.min(updateCount, 3))
+}
+
 export function useJobPolling(jobId?: string | null, enabled = true) {
   return useQuery<JobResponse>({
     queryKey: ['job', jobId],
     queryFn: () => api.jobs.getJob({ jobId: jobId! }),
     enabled: Boolean(jobId) && enabled,
-    refetchInterval: (query) => (isTerminalJob(query.state.data?.status) ? false : 1500),
+    refetchInterval: (query) => {
+      if (isTerminalJob(query.state.data?.status)) return false
+      return nextJobPollDelay(query.state.dataUpdateCount)
+    },
     refetchIntervalInBackground: false,
     retry: 2,
   })
