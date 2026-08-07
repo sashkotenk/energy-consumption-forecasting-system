@@ -76,17 +76,17 @@ jobs:
           tests/unit/test_openapi_contract.py
           ../scripts/export_openapi.py
 
-      - name: Install exact OpenAPI generator
+      - name: Install locked frontend dependencies
         working-directory: frontend
-        run: npm install --save-dev --save-exact orval@8.23.0
-
-      - name: Generate TypeScript SDK
-        working-directory: frontend
-        run: npm run api:generate
+        run: npm ci
 
       - name: Audit frontend dependencies
         working-directory: frontend
         run: npm audit
+
+      - name: Generate TypeScript SDK
+        working-directory: frontend
+        run: npm run api:generate
 
       - name: Type check generated SDK
         working-directory: frontend
@@ -107,10 +107,9 @@ jobs:
           git add \
             backend/tests/unit/test_openapi_contract.py \
             docs/api/openapi.json \
-            frontend/orval.config.ts \
-            frontend/package-lock.json \
             frontend/src/generated/api \
-            scripts/export_openapi.py
+            scripts/export_openapi.py \
+            scripts/generate_api_sdk.mjs
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
