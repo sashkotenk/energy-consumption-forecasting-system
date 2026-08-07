@@ -6,8 +6,8 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-09 adds immutable hourly transformation runs on top of streaming ingestion, deterministic
-quality evaluation, persistence, artifact, and job foundations:
+TASK-10 adds bounded analytical queries on top of streaming ingestion, deterministic quality
+evaluation, immutable hourly transformations, persistence, artifact, and job foundations:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
 - typed environment configuration with production startup validation;
@@ -35,14 +35,17 @@ quality evaluation, persistence, artifact, and job foundations:
 - explicit duplicate resolution and bounded linear interpolation of gaps up to five minutes;
 - interval-aware energy integration, unscaled partial hours, and persisted hourly coverage evidence;
 - immutable derived dataset versions with reproducible transformation manifests and worker jobs;
+- scoped summary, series, local-time profile, heatmap and distribution analytics endpoints;
+- deterministic UTC-anchored server aggregation with enforced range and point-count bounds;
+- explicit kWh, timezone, coverage and quality metadata for every analytical response;
 - separate runnable API and worker processes from the same backend package;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Analytics and ML pipelines remain assigned to later tasks. Raw invalid values and statistical peaks
-remain immutable evidence; transformations materialize a new version without changing source rows
-or raw artifacts.
+ML pipelines remain assigned to later tasks. Raw invalid values and statistical peaks remain
+immutable evidence; transformations materialize a new version without changing source rows or raw
+artifacts, and analytics only reads those materialized hourly facts.
 
 ## Toolchain
 

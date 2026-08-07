@@ -11,10 +11,13 @@ from fastapi.openapi.utils import get_openapi
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from energy_forecast import __version__
+from energy_forecast.analytics.api import create_analytics_router
+from energy_forecast.analytics.service import AnalyticsService
 from energy_forecast.artifacts.local import LocalArtifactStore
 from energy_forecast.artifacts.service import ArtifactService
 from energy_forecast.config import Service, Settings
 from energy_forecast.database import (
+    SqlAlchemyAnalyticsRepository,
     SqlAlchemyArtifactMetadataRepository,
     SqlAlchemyDatasetCatalogRepository,
     SqlAlchemyJobQueue,
@@ -49,6 +52,7 @@ def create_app(
     dataset_service: DatasetService | None = None,
     quality_service: QualityService | None = None,
     transformation_service: TransformationService | None = None,
+    analytics_service: AnalyticsService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
@@ -60,12 +64,14 @@ def create_app(
         resolved_dataset_service,
         resolved_quality_service,
         resolved_transformation_service,
+        resolved_analytics_service,
     ) = _default_application_services(
         resolved_settings,
         job_queue,
         dataset_service,
         quality_service,
         transformation_service,
+        analytics_service,
     )
 
     @asynccontextmanager
@@ -90,6 +96,7 @@ def create_app(
     application.include_router(create_dataset_router(resolved_dataset_service))
     application.include_router(create_quality_router(resolved_quality_service))
     application.include_router(create_transformation_router(resolved_transformation_service))
+    application.include_router(create_analytics_router(resolved_analytics_service))
     _install_openapi_contract(application)
     return application
 
@@ -100,15 +107,24 @@ def _default_application_services(
     dataset_service: DatasetService | None,
     quality_service: QualityService | None,
     transformation_service: TransformationService | None,
+    analytics_service: AnalyticsService | None,
 ) -> tuple[
     AsyncEngine | None,
     JobQueue | None,
     DatasetService | None,
     QualityService | None,
     TransformationService | None,
+    AnalyticsService | None,
 ]:
     if settings.database_url is None:
-        return None, queue, dataset_service, quality_service, transformation_service
+        return (
+            None,
+            queue,
+            dataset_service,
+            quality_service,
+            transformation_service,
+            analytics_service,
+        )
     engine = create_database_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
     resolved_queue = queue or SqlAlchemyJobQueue(session_factory)
@@ -118,6 +134,9 @@ def _default_application_services(
     resolved_transformation_service = transformation_service or TransformationService(
         SqlAlchemyTransformationRepository(session_factory)
     )
+    resolved_analytics_service = analytics_service or AnalyticsService(
+        SqlAlchemyAnalyticsRepository(session_factory)
+    )
     if dataset_service is not None:
         return (
             engine,
@@ -125,6 +144,7 @@ def _default_application_services(
             dataset_service,
             resolved_quality_service,
             resolved_transformation_service,
+            resolved_analytics_service,
         )
     artifacts = ArtifactService(
         LocalArtifactStore(settings.artifact_root),
@@ -141,6 +161,7 @@ def _default_application_services(
         resolved_dataset_service,
         resolved_quality_service,
         resolved_transformation_service,
+        resolved_analytics_service,
     )
 
 

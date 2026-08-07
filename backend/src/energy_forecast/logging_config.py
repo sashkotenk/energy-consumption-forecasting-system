@@ -64,6 +64,16 @@ def configure_logging(settings: Settings) -> None:
     root_logger.addHandler(handler)
     root_logger.setLevel(settings.log_level)
 
+    # In-process Alembic runs use ``fileConfig``, which disables loggers that already exist.
+    # Re-applying application settings must restore every package logger, not only the root.
+    for logger_name, candidate in logging.Logger.manager.loggerDict.items():
+        if (
+            logger_name == "energy_forecast" or logger_name.startswith("energy_forecast.")
+        ) and isinstance(candidate, logging.Logger):
+            candidate.disabled = False
+            candidate.handlers.clear()
+            candidate.propagate = True
+
     for logger_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
         uvicorn_logger = logging.getLogger(logger_name)
         uvicorn_logger.handlers.clear()

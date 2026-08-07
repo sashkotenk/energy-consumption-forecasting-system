@@ -649,3 +649,65 @@ One intermediate complete-gate rerun reproduced the pre-existing two-second coop
 timeout while asyncpg was opening a connection: 111 tests passed and one timed out. The unchanged
 worker lifecycle file immediately passed 2/2 in isolation (18.84 s), and the final complete gate
 passed all 113 selected backend tests. No timeout or production queue behavior was relaxed.
+
+## TASK-10 — Analytics API
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** dataset-version-scoped descriptive summaries; adaptively bucketed energy series; local
+hour-of-day and ISO-weekday profiles; heatmap-ready weekday/hour aggregates; SQL histograms; explicit
+unit, timezone, coverage and quality metadata; bounded ranges and response point counts; indexed query
+plan evidence; and OpenAPI examples.
+
+### Analytics contract
+
+- All endpoints require timezone-aware `from` and `to` query parameters and use a half-open
+  `[from, to)` interval. Ranges must be ordered and no longer than five years.
+- Unknown versions return `404`; versions without ready hourly facts return `409`; invalid ranges and
+  query limits return Problem Details `422`. A valid range with no rows returns a typed empty `200`
+  response rather than inventing zero consumption.
+- `series` accepts `hour`, `day` or `week` and enforces `max_points` from 100 to 10,000. Adaptive
+  buckets are the smallest multiple of the requested resolution whose exact count fits the bound.
+  Buckets are UTC and Monday-anchored; `bucket_seconds` and `downsampled` expose any coarsening.
+- Profiles and heatmaps use the version's IANA timezone. All payloads declare `kWh`; coverage,
+  quality status and contributing sample counts remain visible. Energy sums are never scaled by
+  coverage.
+- Summary percentile, profiles, heatmap and histogram bins are computed in PostgreSQL. Deterministic
+  ordering is applied by bucket, profile key, weekday/hour and histogram bin.
+
+### Schema and architecture changes
+
+No database migration is required. `EXPLAIN` confirms the main range query uses the existing
+`ix_hourly_version_time (dataset_version_id, hour_start DESC)` index on the TimescaleDB hypertable.
+ADR-018 records range, UTC/local timezone and adaptive bucketing decisions. Runtime and design
+OpenAPI now document all six endpoints, limits, empty/error behavior, metadata and representative
+examples; DDL comments, traceability, README and the architecture snapshot are aligned.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `$env:TEST_DATABASE_URL=...; .\.venv\Scripts\pytest.exe tests/integration/test_analytics_api.py -m "integration and not performance" -q` | exit 0; 2 passed, 1 performance test deselected in 24.90 s |
+| `backend` | `$env:TEST_DATABASE_URL=...; .\.venv\Scripts\pytest.exe tests/integration/test_analytics_api.py -m performance -q` | exit 0; 1 passed, 2 deselected in 13.10 s; 20,000-row series query stayed below its 3 s bound and returned at most 200 points |
+| `backend` | `$env:TEST_DATABASE_URL=...; .\.venv\Scripts\pytest.exe tests/integration/test_analytics_api.py -m "not performance" tests/integration/test_api_foundation.py tests/integration/test_worker_lifecycle.py tests/unit/test_logging.py -q` | exit 0; 15 passed, 1 deselected in 43.66 s |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 259.5 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 90 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 82 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 118 collected, 2 performance tests deselected, 116 passed, 0 failed in 217.66 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+The first complete TASK-10 gate ran the new analytics file before the API-foundation tests and exposed
+that an in-process Alembic `fileConfig` disables already-created application loggers. Two old log
+capture tests consequently found no records; the known two-second cancellation test also timed out
+while asyncpg opened a connection. `configure_logging` now re-enables and normalizes every
+`energy_forecast.*` logger, with a regression test. The former failing order then passed 15/15, the
+unchanged worker lifecycle tests passed 2/2, and the final full gate passed all 116 selected tests
+without relaxing any timeout or suppressing tests.
