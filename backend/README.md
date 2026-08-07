@@ -67,8 +67,15 @@ An optional idempotency key returns the original job when all enqueue fields mat
 Problem Details conflict when the key is reused differently. Retry keeps the same job ID and stores
 each claimed attempt in `app.job_attempts`, preserving prior stale/failure evidence.
 
-The package uses a `src` layout. Dataset-import and forecasting handlers are introduced by later
-tasks.
+The package uses a `src` layout. Dataset-import handlers are registered by the worker; experiment
+and forecasting handlers are introduced with their application services.
+
+## Model bundles
+
+`ModelBundleService` writes only internal model artifacts through `ArtifactService`. A bundle stores
+`manifest.json` and `model.joblib`; load verifies the persisted artifact checksum, manifest format,
+model payload checksum, feature schema, horizon, dataset/version policy and library major versions
+before calling `joblib.load`. Dataset upload routes never accept model files.
 
 ## Dataset catalog and uploads
 

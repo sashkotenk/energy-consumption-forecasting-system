@@ -38,6 +38,9 @@ unit, timezone, coverage and quality metadata. The pure ML feature boundary cons
 shifted rolling statistics, local calendar cycles, optional past-quality signals and direct
 24-output targets. It also owns the four expanding chronological folds, 24-hour purge and the
 separate final-test boundary. Training and forecast handlers remain deferred.
+The model foundation defines common trainer/predictor ports, a bounded algorithm registry, metrics,
+Seasonal Naive-24/-168 and an internal bundle lifecycle. Bundle loading checks artifact and payload
+checksums plus compatibility metadata before deserializing joblib bytes.
 
 ## Intended system architecture
 
@@ -97,7 +100,8 @@ These documents describe planned and implemented components. Runtime OpenAPI for
   generated-key `.csv`/`.txt` artifacts, sanitize client metadata, and inspect actual tabular text.
 - Dataset deletion is rejected once immutable versions/imports exist; it never cascades into artifact
   byte deletion.
-- Future model loading may accept only internally produced, checksum-verified bundles.
+- Model loading accepts only internally produced, checksum-verified bundles with compatible
+  manifest, feature schema, horizon and library-major policy.
 - Time-series preprocessing must preserve chronological order and prevent future-data leakage.
 - A transformation never edits its source version or raw artifact; the child version records source,
   engine, policy, summary, coverage, interpolation and hourly quality status.

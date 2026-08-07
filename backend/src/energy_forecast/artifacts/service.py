@@ -66,6 +66,13 @@ class ArtifactService:
             raise ValueError("SHA-256 must contain 64 lowercase hexadecimal characters")
         return await self._metadata.find_by_sha256(sha256)
 
+    async def get_metadata(self, artifact_id: UUID) -> ArtifactMetadata:
+        """Return persisted metadata without exposing a storage key to callers."""
+        metadata = await self._metadata.get(artifact_id)
+        if metadata is None:
+            raise ArtifactNotFoundError("Artifact metadata was not found")
+        return metadata
+
     async def delete(self, artifact_id: UUID) -> None:
         """Remove metadata only after its DB references are checked, then clean up bytes."""
         metadata = await self._metadata.delete_if_unreferenced(artifact_id)
