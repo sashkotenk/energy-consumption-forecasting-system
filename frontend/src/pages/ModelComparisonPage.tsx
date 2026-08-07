@@ -49,7 +49,7 @@ export function ModelComparisonPage() {
     const selected = [baseline, recommended].filter((row, index, array): row is Record<string, unknown> => Boolean(row) && array.indexOf(row) === index)
     return selected.map((row) => {
       const all = metrics(row)
-      const final = all.filter((item) => String(item.evaluation_scope ?? '').toLowerCase().includes('final'))
+      const final = all.filter((item) => text(item, 'evaluation_scope')?.toLowerCase().includes('final') === true)
       const points = (final.length ? final : all).map((item) => ({ horizon: number(item, 'horizon') ?? 0, mae: number(item, 'mae') })).filter((item) => item.horizon > 0 && item.mae !== null).sort((a, b) => a.horizon - b.horizon)
       return { algorithm: text(row, 'algorithm') ?? 'model', points }
     }).filter((row) => row.points.length)
