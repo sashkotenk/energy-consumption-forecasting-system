@@ -37,7 +37,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Apply TASK-17 repository patch
-        run: python scripts/prepare_task17.py
+        run: |
+          python scripts/prepare_task17.py
+          python scripts/prepare_task17_problem_schema.py
 
       - name: Install backend dependencies
         working-directory: backend
