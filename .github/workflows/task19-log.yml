@@ -29,53 +29,7 @@ jobs:
               exit 1
             fi
             sed -i '$d' docs/implementation-log.md
-            cat >> docs/implementation-log.md <<'EOF'
-
-## TASK-19 — Experiment and forecast workflows
-
-**Date:** 2026-08-08
-**Status:** implemented and repository-wide CI verified
-
-**Scope:** React workflows for experiment history and creation, long-running experiment progress,
-cancel/retry terminal states, model comparison with a required Seasonal Naive-24 baseline, MAE by
-forecast horizon, forecast history/creation/details, actual-versus-predicted visualization, 24-hour
-energy totals, and controlled experiment/forecast artifact downloads. TASK-20 is intentionally outside
-this change.
-
-### Contract and architecture impact
-
-The frontend continues to consume only the generated TypeScript SDK from the authoritative runtime
-OpenAPI contract. Seasonal Naive-24 is inserted as the non-removable baseline for new experiments;
-W1 remains unavailable until a weather dataset is connected. Job polling uses capped 1–5 second
-backoff and stops on terminal states or component unmount. Export UI creates artifacts server-side and
-retrieves their bytes through the controlled artifact endpoint by ID; response storage-like URLs are
-not used. ECharts views are keyboard-focusable, disposed during cleanup and paired with textual or
-tabular alternatives. No database schema, migration or backend API contract changed.
-
-### Verification evidence
-
-TASK-19 PR #19 Baseline CI run 84 (`31225674658`) completed successfully on the merge candidate.
-All three jobs — Frontend, Backend and Repository verification — completed with `success`.
-
-| CI job | Command / gate | Actual result |
-|---|---|---|
-| Frontend | `npm ci` | exit 0; 278 packages added, 279 audited, 0 vulnerabilities |
-| Frontend | `npm run api:check` | exit 0; generated SDK/OpenAPI drift check passed |
-| Frontend | `npm run lint` | exit 0; 0 errors, 4 warnings |
-| Frontend | `npm run typecheck` | exit 0 |
-| Frontend | `npm run test -- --run` | exit 0; 4 test files, 10 tests passed, 0 failed |
-| Frontend | `npm run build` | exit 0; 838 modules transformed; production build completed |
-| Repository | `git diff --check` | exit 0 |
-| Repository | `./scripts/verify.ps1` | exit 0; repository-wide verification completed successfully |
-| Backend | locked dependencies, lint, formatting, mypy, runtime OpenAPI, Alembic upgrade/drift and pytest | all completed successfully |
-
-The frontend build still reports the known Vite chunk-size warning (main JavaScript chunk about
-1.58 MB, 513.94 kB gzip). Lint reports four non-failing warnings: three generated SDK unused-disable
-warnings and the existing React Hook Form compiler warning in the import wizard. These do not bypass
-or weaken any required check and are recorded for later optimization.
-
-TASK-20 has not been started.
-EOF
+            printf '%s' 'CiMjIFRBU0stMTkg4oCUIEV4cGVyaW1lbnQgYW5kIGZvcmVjYXN0IHdvcmtmbG93cwoKKipEYXRlOioqIDIwMjYtMDgtMDgKKipTdGF0dXM6KiogaW1wbGVtZW50ZWQgYW5kIHJlcG9zaXRvcnktd2lkZSBDSSB2ZXJpZmllZAoKKipTY29wZToqKiBSZWFjdCB3b3JrZmxvd3MgZm9yIGV4cGVyaW1lbnQgaGlzdG9yeSBhbmQgY3JlYXRpb24sIGxvbmctcnVubmluZyBleHBlcmltZW50IHByb2dyZXNzLApjYW5jZWwvcmV0cnkgdGVybWluYWwgc3RhdGVzLCBtb2RlbCBjb21wYXJpc29uIHdpdGggYSByZXF1aXJlZCBTZWFzb25hbCBOYWl2ZS0yNCBiYXNlbGluZSwgTUFFIGJ5CmZvcmVjYXN0IGhvcml6b24sIGZvcmVjYXN0IGhpc3RvcnkvY3JlYXRpb24vZGV0YWlscywgYWN0dWFsLXZlcnN1cy1wcmVkaWN0ZWQgdmlzdWFsaXphdGlvbiwgMjQtaG91cgplbmVyZ3kgdG90YWxzLCBhbmQgY29udHJvbGxlZCBleHBlcmltZW50L2ZvcmVjYXN0IGFydGlmYWN0IGRvd25sb2Fkcy4gVEFTSy0yMCBpcyBpbnRlbnRpb25hbGx5IG91dHNpZGUKdGhpcyBjaGFuZ2UuCgojIyMgQ29udHJhY3QgYW5kIGFyY2hpdGVjdHVyZSBpbXBhY3QKClRoZSBmcm9udGVuZCBjb250aW51ZXMgdG8gY29uc3VtZSBvbmx5IHRoZSBnZW5lcmF0ZWQgVHlwZVNjcmlwdCBTREsgZnJvbSB0aGUgYXV0aG9yaXRhdGl2ZSBydW50aW1lCk9wZW5BUEkgY29udHJhY3QuIFNlYXNvbmFsIE5haXZlLTI0IGlzIGluc2VydGVkIGFzIHRoZSBub24tcmVtb3ZhYmxlIGJhc2VsaW5lIGZvciBuZXcgZXhwZXJpbWVudHM7ClcxIHJlbWFpbnMgdW5hdmFpbGFibGUgdW50aWwgYSB3ZWF0aGVyIGRhdGFzZXQgaXMgY29ubmVjdGVkLiBKb2IgcG9sbGluZyB1c2VzIGNhcHBlZCAx4oCTNSBzZWNvbmQKYmFja29mZiBhbmQgc3RvcHMgb24gdGVybWluYWwgc3RhdGVzIG9yIGNvbXBvbmVudCB1bm1vdW50LiBFeHBvcnQgVUkgY3JlYXRlcyBhcnRpZmFjdHMgc2VydmVyLXNpZGUgYW5kCnJldHJpZXZlcyB0aGVpciBieXRlcyB0aHJvdWdoIHRoZSBjb250cm9sbGVkIGFydGlmYWN0IGVuZHBvaW50IGJ5IElEOyByZXNwb25zZSBzdG9yYWdlLWxpa2UgVVJMcyBhcmUKbm90IHVzZWQuIEVDaGFydHMgdmlld3MgYXJlIGtleWJvYXJkLWZvY3VzYWJsZSwgZGlzcG9zZWQgZHVyaW5nIGNsZWFudXAgYW5kIHBhaXJlZCB3aXRoIHRleHR1YWwgb3IKdGFidWxhciBhbHRlcm5hdGl2ZXMuIE5vIGRhdGFiYXNlIHNjaGVtYSwgbWlncmF0aW9uIG9yIGJhY2tlbmQgQVBJIGNvbnRyYWN0IGNoYW5nZWQuCgojIyMgVmVyaWZpY2F0aW9uIGV2aWRlbmNlCgpUQVNLLTE5IFBSICMxOSBCYXNlbGluZSBDSSBydW4gODQgKGAzMTIyNTY3NDY1OGApIGNvbXBsZXRlZCBzdWNjZXNzZnVsbHkgb24gdGhlIG1lcmdlIGNhbmRpZGF0ZS4KQWxsIHRocmVlIGpvYnMg4oCUIEZyb250ZW5kLCBCYWNrZW5kIGFuZCBSZXBvc2l0b3J5IHZlcmlmaWNhdGlvbiDigJQgY29tcGxldGVkIHdpdGggYHN1Y2Nlc3NgLgoKfCBDSSBqb2IgfCBDb21tYW5kIC8gZ2F0ZSB8IEFjdHVhbCByZXN1bHQgfAp8LS0tfC0tLXwtLS18CnwgRnJvbnRlbmQgfCBgbnBtIGNpYCB8IGV4aXQgMDsgMjc4IHBhY2thZ2VzIGFkZGVkLCAyNzkgYXVkaXRlZCwgMCB2dWxuZXJhYmlsaXRpZXMgfAp8IEZyb250ZW5kIHwgYG5wbSBydW4gYXBpOmNoZWNrYCB8IGV4aXQgMDsgZ2VuZXJhdGVkIFNESy9PcGVuQVBJIGRyaWZ0IGNoZWNrIHBhc3NlZCB8CnwgRnJvbnRlbmQgfCBgbnBtIHJ1biBsaW50YCB8IGV4aXQgMDsgMCBlcnJvcnMsIDQgd2FybmluZ3MgfAp8IEZyb250ZW5kIHwgYG5wbSBydW4gdHlwZWNoZWNrYCB8IGV4aXQgMCB8CnwgRnJvbnRlbmQgfCBgbnBtIHJ1biB0ZXN0IC0tIC0tcnVuYCB8IGV4aXQgMDsgNCB0ZXN0IGZpbGVzLCAxMCB0ZXN0cyBwYXNzZWQsIDAgZmFpbGVkIHwKfCBGcm9udGVuZCB8IGBucG0gcnVuIGJ1aWxkYCB8IGV4aXQgMDsgODM4IG1vZHVsZXMgdHJhbnNmb3JtZWQ7IHByb2R1Y3Rpb24gYnVpbGQgY29tcGxldGVkIHwKfCBSZXBvc2l0b3J5IHwgYGdpdCBkaWZmIC0tY2hlY2tgIHwgZXhpdCAwIHwKfCBSZXBvc2l0b3J5IHwgYC4vc2NyaXB0cy92ZXJpZnkucHMxYCB8IGV4aXQgMDsgcmVwb3NpdG9yeS13aWRlIHZlcmlmaWNhdGlvbiBjb21wbGV0ZWQgc3VjY2Vzc2Z1bGx5IHwKfCBCYWNrZW5kIHwgbG9ja2VkIGRlcGVuZGVuY2llcywgbGludCwgZm9ybWF0dGluZywgbXlweSwgcnVudGltZSBPcGVuQVBJLCBBbGVtYmljIHVwZ3JhZGUvZHJpZnQgYW5kIHB5dGVzdCB8IGFsbCBjb21wbGV0ZWQgc3VjY2Vzc2Z1bGx5IHwKClRoZSBmcm9udGVuZCBidWlsZCBzdGlsbCByZXBvcnRzIHRoZSBrbm93biBWaXRlIGNodW5rLXNpemUgd2FybmluZyAobWFpbiBKYXZhU2NyaXB0IGNodW5rIGFib3V0CjEuNTggTUIsIDUxMy45NCBrQiBnemlwKS4gTGludCByZXBvcnRzIGZvdXIgbm9uLWZhaWxpbmcgd2FybmluZ3M6IHRocmVlIGdlbmVyYXRlZCBTREsgdW51c2VkLWRpc2FibGUKd2FybmluZ3MgYW5kIHRoZSBleGlzdGluZyBSZWFjdCBIb29rIEZvcm0gY29tcGlsZXIgd2FybmluZyBpbiB0aGUgaW1wb3J0IHdpemFyZC4gVGhlc2UgZG8gbm90IGJ5cGFzcwpvciB3ZWFrZW4gYW55IHJlcXVpcmVkIGNoZWNrIGFuZCBhcmUgcmVjb3JkZWQgZm9yIGxhdGVyIG9wdGltaXphdGlvbi4KClRBU0stMjAgaGFzIG5vdCBiZWVuIHN0YXJ0ZWQuCg==' | base64 --decode >> docs/implementation-log.md
             git rm .github/workflows/task19-log.yml
           fi
 
