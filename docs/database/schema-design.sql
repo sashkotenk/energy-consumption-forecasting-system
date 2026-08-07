@@ -163,20 +163,41 @@ CREATE TABLE app.dataset_import_errors (
 CREATE INDEX ix_import_errors_import_row
     ON app.dataset_import_errors (import_id, source_row_number);
 
+CREATE TABLE app.data_quality_reports (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_version_id uuid NOT NULL
+        REFERENCES app.dataset_versions(id) ON DELETE CASCADE,
+    report_version integer NOT NULL CHECK (report_version >= 1),
+    engine_version varchar(80) NOT NULL,
+    expected_interval_seconds integer
+        CHECK (expected_interval_seconds IS NULL OR expected_interval_seconds > 0),
+    summary jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (dataset_version_id, report_version)
+);
+
+CREATE INDEX ix_quality_reports_version_latest
+    ON app.data_quality_reports (dataset_version_id, report_version DESC);
+
 CREATE TABLE app.data_quality_issues (
     id bigserial PRIMARY KEY,
     dataset_version_id uuid NOT NULL
         REFERENCES app.dataset_versions(id) ON DELETE CASCADE,
     issue_type varchar(50) NOT NULL CHECK (issue_type IN (
-        'missing', 'exact_duplicate', 'conflicting_duplicate',
-        'time_gap', 'invalid_value', 'statistical_anomaly',
+        'missing', 'non_finite', 'physical_invalidity',
+        'exact_duplicate', 'conflicting_duplicate', 'time_gap',
+        'timestamp_order', 'statistical_anomaly',
         'timezone_ambiguity', 'parse_error'
     )),
+    report_id uuid REFERENCES app.data_quality_reports(id) ON DELETE CASCADE,
     severity varchar(16) NOT NULL CHECK (severity IN ('info', 'warning', 'error')),
     observed_at timestamptz,
+    range_end timestamptz,
+    occurrence_count bigint NOT NULL DEFAULT 1 CHECK (occurrence_count >= 1),
     source_row_number bigint,
     column_name varchar(100),
     details jsonb NOT NULL DEFAULT '{}'::jsonb,
+    CHECK (range_end IS NULL OR observed_at IS NULL OR range_end >= observed_at),
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -213,14 +234,14 @@ CREATE TABLE ts.raw_measurements (
     timestamp_original varchar(80),
     timezone_context varchar(80),
     interval_seconds integer CHECK (interval_seconds IS NULL OR interval_seconds > 0),
-    energy_kwh double precision CHECK (energy_kwh IS NULL OR energy_kwh >= 0),
-    active_power_kw double precision CHECK (active_power_kw IS NULL OR active_power_kw >= 0),
-    reactive_power_kw double precision CHECK (reactive_power_kw IS NULL OR reactive_power_kw >= 0),
-    voltage_v double precision CHECK (voltage_v IS NULL OR voltage_v > 0),
-    current_a double precision CHECK (current_a IS NULL OR current_a >= 0),
-    sub_metering_1_wh double precision CHECK (sub_metering_1_wh IS NULL OR sub_metering_1_wh >= 0),
-    sub_metering_2_wh double precision CHECK (sub_metering_2_wh IS NULL OR sub_metering_2_wh >= 0),
-    sub_metering_3_wh double precision CHECK (sub_metering_3_wh IS NULL OR sub_metering_3_wh >= 0),
+    energy_kwh double precision,
+    active_power_kw double precision,
+    reactive_power_kw double precision,
+    voltage_v double precision,
+    current_a double precision,
+    sub_metering_1_wh double precision,
+    sub_metering_2_wh double precision,
+    sub_metering_3_wh double precision,
     parse_status varchar(20) NOT NULL CHECK (parse_status IN ('valid', 'warning', 'invalid')),
     quality_flags text[] NOT NULL DEFAULT '{}',
     imported_at timestamptz NOT NULL DEFAULT now(),

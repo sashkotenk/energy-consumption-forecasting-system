@@ -12,6 +12,7 @@ from energy_forecast.datasets.models import ImportProfile
 from energy_forecast.datasets.parsers import ParseBatch, ParsedMeasurement, create_parser
 from energy_forecast.jobs.domain import JobCancellationRequested
 from energy_forecast.jobs.worker import JobExecutionContext
+from energy_forecast.quality.models import StoredQualityReport
 
 
 class DatasetImportRepository(Protocol):
@@ -39,6 +40,10 @@ class DatasetImportRepository(Protocol):
     async def fail(self, *, import_id: UUID, dataset_version_id: UUID, cancelled: bool) -> None: ...
 
 
+class QualityEvaluator(Protocol):
+    async def evaluate(self, dataset_version_id: UUID) -> StoredQualityReport: ...
+
+
 class DatasetImportHandler:
     """Read one immutable artifact in bounded chunks and persist each batch transactionally."""
 
@@ -48,12 +53,14 @@ class DatasetImportHandler:
         artifacts: ArtifactService,
         *,
         batch_size: int = 5_000,
+        quality_evaluator: QualityEvaluator | None = None,
     ) -> None:
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
         self._repository = repository
         self._artifacts = artifacts
         self._batch_size = batch_size
+        self._quality_evaluator = quality_evaluator
 
     async def __call__(self, context: JobExecutionContext) -> dict[str, Any]:
         payload = context.payload
@@ -135,6 +142,15 @@ class DatasetImportHandler:
             min_timestamp=min_timestamp,
             max_timestamp=max_timestamp,
         )
+        if self._quality_evaluator is not None:
+            try:
+                quality_report = await self._quality_evaluator.evaluate(version_id)
+            except BaseException:
+                await self._repository.fail(
+                    import_id=import_id, dataset_version_id=version_id, cancelled=False
+                )
+                raise
+            report["quality_report_version"] = quality_report.report_version
         await context.report_progress(100)
         return report
 

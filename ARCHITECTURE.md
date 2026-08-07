@@ -2,7 +2,7 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-07 dataset-ingestion boundary, not the complete business
+The repository currently implements the TASK-08 data-quality boundary, not the complete business
 system described by the design documents.
 
 ```text

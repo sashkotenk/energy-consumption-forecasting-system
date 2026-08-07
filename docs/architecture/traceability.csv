@@ -1,6 +1,6 @@
 requirement,component,data,api,test
 FR-01,Dataset Catalog and Ingestion Service,datasets dataset_versions dataset_imports dataset_import_errors raw_measurements artifacts jobs,/datasets and /dataset-imports,UCI generic parser unit and memory smoke; batch worker PostgreSQL E2E
-FR-02,Data Quality Engine,data_quality_issues,quality report,unit integration
+FR-02,Data Quality Engine,data_quality_reports data_quality_issues,/dataset-versions/{versionId}/quality,deterministic quality unit; persistence pagination and API integration
 FR-03,Transformation Pipeline,hourly_observations,transformations,unit database
 FR-04,Analytics Query,hourly_observations,analytics endpoints,API component
 FR-05,Experiment Service and Worker,experiments model_runs,experiments,ML integration

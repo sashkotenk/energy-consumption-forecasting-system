@@ -15,6 +15,7 @@ EXPECTED_TABLES = {
     "app": {
         "artifacts",
         "data_quality_issues",
+        "data_quality_reports",
         "dataset_import_errors",
         "dataset_imports",
         "dataset_versions",
@@ -49,6 +50,7 @@ EXPECTED_INDEXES = {
     "ix_model_runs_experiment",
     "ix_quality_issues_version_time",
     "ix_quality_issues_version_type",
+    "ix_quality_reports_version_latest",
     "ix_raw_version_time",
     "ix_weather_location_time",
     "ux_dataset_versions_source",

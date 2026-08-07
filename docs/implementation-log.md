@@ -522,3 +522,65 @@ mechanical formatting. After formatting, the targeted lint/type checks and the c
 passed. A separate `alembic check` after the targeted integration run correctly reported that the
 persistent development database had not yet applied the new revision; the complete gate applied it
 and confirmed zero model drift.
+
+## TASK-08 — Data Quality Engine
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** deterministic domain checks for source timestamp order, modal expected interval, gaps,
+exact and conflicting duplicates, missing and non-finite values, physical invalidity, parser errors
+and informational robust-z anomalies; immutable versioned quality reports; grouped bounded evidence;
+PostgreSQL persistence; latest/historical report selection; and paginated quality API responses.
+
+### Quality contract
+
+- The expected interval is the deterministic mode of positive deltas between sorted unique
+  timestamps, with the smaller interval winning a frequency tie. A gap is any delta greater than
+  `1.5 * expected_interval`.
+- Duplicate groups classify repeated identical signatures as exact excess rows and any group with
+  multiple signatures as conflicting. Mixed groups can therefore retain both kinds of evidence.
+- Missing, non-finite and physically invalid values are separate categories. Negative energy, power,
+  current and sub-metering values and non-positive voltage are physical errors.
+- Robust z-score uses `abs(x - median) / (1.4826 * MAD)` and flags values above 6 as informational.
+  Large positive values remain unchanged in raw storage.
+- Every evaluation appends a report version and issue groups with severity, bounded time range,
+  occurrence count and at most ten deterministic evidence examples. `GET
+  /dataset-versions/{versionId}/quality` defaults to the latest report, accepts a historical
+  `report_version`, and limits `page_size` to 100.
+- The default dataset-import worker runs quality evaluation after normalized import completion and
+  moves a successfully evaluated version to `ready_for_transformation`.
+
+### Schema and architecture changes
+
+Migration `71e4b5ca9021` creates `app.data_quality_reports`, versions and links issue groups, and adds
+range/count fields. It removes physical-plausibility checks from `ts.raw_measurements` so invalid raw
+facts remain available to the quality engine; structural constraints remain. ADR-016 records this
+ownership boundary and immutable report policy. DDL, OpenAPI, traceability and architecture/runbook
+documentation now match runtime behavior.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_quality_engine.py -q` | exit 0; 6 passed, 0 failed in 0.05 s |
+| `backend` | `python -m uv run pytest tests/unit/test_quality_engine.py tests/unit/test_dataset_parsers.py -q` | exit 0; 11 passed, 0 failed in 0.08 s |
+| `backend` | `python -m uv run pytest tests/integration/test_quality_api.py tests/integration/test_database_migrations.py -v` | exit 0; 3 passed, 0 failed in 38.37 s against disposable TimescaleDB databases |
+| `backend` | `python -m uv run pytest tests/integration/test_worker_lifecycle.py -v` | exit 0; 2 passed, 0 failed in 18.92 s |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 226.9 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 73 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 66 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 105 collected, 1 performance test deselected, 104 passed, 0 failed, 0 skipped in 180.97 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+One intermediate complete-gate rerun reported 103 passed and one timeout in the pre-existing
+two-second cooperative-cancellation integration test while opening a new database connection. The
+unchanged test immediately passed 2/2 in isolation, and the subsequent complete gate above passed all
+104 selected backend tests. No timeout, test suppression or production job behavior was changed.
