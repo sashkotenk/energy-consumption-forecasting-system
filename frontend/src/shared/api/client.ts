@@ -1,7 +1,7 @@
 import { AnalyticsApi, DatasetsApi, ExperimentsApi, ExportsApi, ForecastsApi, ImportsApi, JobsApi, SystemApi } from '../../generated/api/apis'
 import { Configuration } from '../../generated/api/runtime'
 
-const basePath = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+const basePath = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
 const configuration = new Configuration({ basePath })
 
 export const api = {
