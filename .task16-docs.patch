@@ -1,0 +1,198 @@
+diff --git a/docs/api/openapi-design.yaml b/docs/api/openapi-design.yaml
+--- a/docs/api/openapi-design.yaml
++++ b/docs/api/openapi-design.yaml
+@@ -17,6 +17,7 @@ tags:
+   - name: Analytics
+   - name: Experiments
+   - name: Forecasts
++  - name: Exports
+   - name: Jobs
+ 
+ paths:
+@@ -447,6 +448,28 @@ paths:
+               schema: {$ref: "#/components/schemas/Experiment"}
+         "409": {$ref: "#/components/responses/Problem"}
+ 
++  /experiments/{experimentId}/exports:
++    parameters:
++      - {$ref: "#/components/parameters/ExperimentId"}
++    post:
++      tags: [Exports]
++      operationId: createExperimentExport
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/ExperimentExportCreate"}
++      responses:
++        "201":
++          description: Immutable experiment export artifact
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/ExportArtifact"}
++        "404": {$ref: "#/components/responses/Problem"}
++        "409": {$ref: "#/components/responses/Problem"}
++        "422": {$ref: "#/components/responses/Problem"}
++        "503": {$ref: "#/components/responses/Problem"}
++
+   /forecasts:
+     get:
+       tags: [Forecasts]
+@@ -493,26 +513,50 @@ paths:
+               schema: {$ref: "#/components/schemas/Forecast"}
+         "404": {$ref: "#/components/responses/Problem"}
+ 
+-  /forecasts/{forecastId}/export:
++  /forecasts/{forecastId}/exports:
+     parameters:
+       - {$ref: "#/components/parameters/ForecastId"}
+-      - name: format
+-        in: query
+-        required: true
+-        schema:
+-          type: string
+-          enum: [csv, json]
+-    get:
+-      tags: [Forecasts]
+-      operationId: exportForecast
++    post:
++      tags: [Exports]
++      operationId: createForecastExport
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/ForecastExportCreate"}
+       responses:
+-        "200":
+-          description: Forecast export
++        "201":
++          description: Immutable forecast export artifact
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/ExportArtifact"}
++        "404": {$ref: "#/components/responses/Problem"}
++        "409": {$ref: "#/components/responses/Problem"}
++        "422": {$ref: "#/components/responses/Problem"}
++        "503": {$ref: "#/components/responses/Problem"}
++
++  /artifacts/{artifactId}/download:
++    parameters:
++      - {$ref: "#/components/parameters/ArtifactId"}
++    get:
++      tags: [Exports]
++      operationId: downloadExportArtifact
++      responses:
++        "200":
++          description: Purpose-checked export stream; internal storage paths are never returned
++          headers:
++            Content-Disposition:
++              schema: {type: string}
++            X-Content-SHA256:
++              schema: {type: string, pattern: '^[0-9a-f]{64}$'}
+           content:
+-            text/csv:
+-              schema: {type: string, format: binary}
+-            application/json:
+-              schema: {type: object}
++            application/octet-stream:
++              schema: {type: string, format: binary}
++        "403": {$ref: "#/components/responses/Problem"}
++        "404": {$ref: "#/components/responses/Problem"}
++        "410": {$ref: "#/components/responses/Problem"}
++        "422": {$ref: "#/components/responses/Problem"}
++        "503": {$ref: "#/components/responses/Problem"}
+ 
+   /jobs:
+     post:
+@@ -607,5 +653,10 @@ components:
+       required: true
+       schema: {type: string, format: uuid}
++    ArtifactId:
++      name: artifactId
++      in: path
++      required: true
++      schema: {type: string, format: uuid}
+     JobId:
+       name: jobId
+       in: path
+@@ -1157,6 +1208,40 @@ components:
+           format: date-time
+           description: Optional aware UTC-hour boundary backed by a completed hourly bucket
+ 
++    ForecastExportCreate:
++      type: object
++      additionalProperties: false
++      required: [format]
++      properties:
++        format: {type: string, enum: [csv, chart_json]}
++
++    ExperimentExportCreate:
++      type: object
++      additionalProperties: false
++      required: [format]
++      properties:
++        format:
++          type: string
++          enum: [metrics_csv, metrics_json, manifest_json]
++
++    ExportArtifact:
++      type: object
++      required:
++        [id, purpose, filename, media_type, size_bytes, sha256, created_at, download_url]
++      properties:
++        id: {type: string, format: uuid}
++        purpose:
++          type: string
++          enum: [forecast_export, metrics, chart, manifest]
++        filename: {type: string}
++        media_type: {type: string}
++        size_bytes: {type: integer, minimum: 0}
++        sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
++        created_at: {type: string, format: date-time}
++        download_url:
++          type: string
++          format: uri-reference
++
+     ForecastPoint:
+       type: object
+       required: [horizon, target_time, predicted_energy_kwh]
+diff --git a/docs/implementation-log.md b/docs/implementation-log.md
+--- a/docs/implementation-log.md
++++ b/docs/implementation-log.md
+@@ -942,1 +942,35 @@ ADR-023 records why one bounded prediction is synchronous and why exact bundle/d
+ and atomic 24-point persistence are part of the service boundary. No schema migration was required.
++
++## TASK-16 — Exports and controlled downloads
++
++**Date:** 2026-08-07
++**Status:** implemented; repository-wide CI verification pending
++
++Implemented the bounded export boundary on top of the existing forecast, experiment and Artifact
++services. Forecast results serialize to fixed-column UTF-8 CSV or chart-ready JSON. Completed
++experiments serialize persisted comparison metrics to normalized CSV or structured JSON and expose
++the canonical persisted result manifest as JSON. Every generated file is stored through the existing
++Artifact Service so `app.artifacts` records its purpose, media type, generated download name, size and
++SHA-256 without a new schema or migration.
++
++The controlled `GET /artifacts/{artifactId}/download` route first resolves metadata, permits only
++`forecast_export`, `metrics`, `chart` and `manifest`, then streams by artifact ID. API models never
++return `storage_key` or filesystem paths. Attachment filenames remove path separators, control
++characters and header metacharacters. Missing/deleted metadata maps to 404 Problem Details, a wrong
++purpose to 403, and metadata whose bytes are unavailable to 410. Failed experiments return 409 when
++an export is requested.
++
++CSV serialization has explicit UTF-8 encoding and constant field sequences. Text cells beginning
++with `=`, `+`, `-` or `@` (including after leading whitespace) are prefixed with an apostrophe before
++CSV quoting so spreadsheet applications treat them as literal values. Numeric values are not
++rewritten.
++
++No dependency version changed in TASK-16. Before the pull-request gate, the prepared TASK-16 Python
++files passed `python -m py_compile`; the earlier isolated export unit harness passed 10 tests with 0
++failures and 0 skips. Repository-wide `ruff`, formatting, mypy, PostgreSQL integration, Alembic,
++frontend, Compose and full verification results are intentionally left to the pull-request CI gate
++and are not claimed as passing in this entry before that gate completes.
++
++ADR-024 records immediate bounded artifact-backed exports and purpose-controlled downloads. No DDL
++or Alembic migration change is required because the existing artifact purpose values and metadata
++columns already cover all TASK-16 export formats. TASK-17 has not been started.
