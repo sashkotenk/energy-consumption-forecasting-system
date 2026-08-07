@@ -941,3 +941,37 @@ transactional forecast/point persistence.
 
 ADR-023 records why one bounded prediction is synchronous and why exact bundle/dataset compatibility
 and atomic 24-point persistence are part of the service boundary. No schema migration was required.
+
+## TASK-16 — Exports and controlled downloads
+
+**Date:** 2026-08-07
+**Status:** implemented; repository-wide CI verification pending
+
+Implemented the bounded export boundary on top of the existing forecast, experiment and Artifact
+services. Forecast results serialize to fixed-column UTF-8 CSV or chart-ready JSON. Completed
+experiments serialize persisted comparison metrics to normalized CSV or structured JSON and expose
+the canonical persisted result manifest as JSON. Every generated file is stored through the existing
+Artifact Service so `app.artifacts` records its purpose, media type, generated download name, size and
+SHA-256 without a new schema or migration.
+
+The controlled `GET /artifacts/{artifactId}/download` route first resolves metadata, permits only
+`forecast_export`, `metrics`, `chart` and `manifest`, then streams by artifact ID. API models never
+return `storage_key` or filesystem paths. Attachment filenames remove path separators, control
+characters and header metacharacters. Missing/deleted metadata maps to 404 Problem Details, a wrong
+purpose to 403, and metadata whose bytes are unavailable to 410. Failed experiments return 409 when
+an export is requested.
+
+CSV serialization has explicit UTF-8 encoding and constant field sequences. Text cells beginning
+with `=`, `+`, `-` or `@` (including after leading whitespace) are prefixed with an apostrophe before
+CSV quoting so spreadsheet applications treat them as literal values. Numeric values are not
+rewritten.
+
+No dependency version changed in TASK-16. Before the pull-request gate, the prepared TASK-16 Python
+files passed `python -m py_compile`; the earlier isolated export unit harness passed 10 tests with 0
+failures and 0 skips. Repository-wide `ruff`, formatting, mypy, PostgreSQL integration, Alembic,
+frontend, Compose and full verification results are intentionally left to the pull-request CI gate
+and are not claimed as passing in this entry before that gate completes.
+
+ADR-024 records immediate bounded artifact-backed exports and purpose-controlled downloads. No DDL
+or Alembic migration change is required because the existing artifact purpose values and metadata
+columns already cover all TASK-16 export formats. TASK-17 has not been started.

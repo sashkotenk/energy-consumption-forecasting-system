@@ -15,6 +15,7 @@ tags:
   - name: Analytics
   - name: Experiments
   - name: Forecasts
+  - name: Exports
   - name: Jobs
 
 paths:
@@ -447,6 +448,28 @@ paths:
               schema: {$ref: "#/components/schemas/Experiment"}
         "409": {$ref: "#/components/responses/Problem"}
 
+  /experiments/{experimentId}/exports:
+    parameters:
+      - {$ref: "#/components/parameters/ExperimentId"}
+    post:
+      tags: [Exports]
+      operationId: createExperimentExport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ExperimentExportCreate"}
+      responses:
+        "201":
+          description: Immutable experiment export artifact
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExportArtifact"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
+
   /forecasts:
     get:
       tags: [Forecasts]
@@ -492,26 +515,50 @@ paths:
               schema: {$ref: "#/components/schemas/Forecast"}
         "404": {$ref: "#/components/responses/Problem"}
 
-  /forecasts/{forecastId}/export:
+  /forecasts/{forecastId}/exports:
     parameters:
       - {$ref: "#/components/parameters/ForecastId"}
-      - name: format
-        in: query
+    post:
+      tags: [Exports]
+      operationId: createForecastExport
+      requestBody:
         required: true
-        schema:
-          type: string
-          enum: [csv, json]
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ForecastExportCreate"}
+      responses:
+        "201":
+          description: Immutable forecast export artifact
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExportArtifact"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
+
+  /artifacts/{artifactId}/download:
+    parameters:
+      - {$ref: "#/components/parameters/ArtifactId"}
     get:
-      tags: [Forecasts]
-      operationId: exportForecast
+      tags: [Exports]
+      operationId: downloadExportArtifact
       responses:
         "200":
-          description: Forecast export
+          description: Purpose-checked export stream; internal storage paths are never returned
+          headers:
+            Content-Disposition:
+              schema: {type: string}
+            X-Content-SHA256:
+              schema: {type: string, pattern: '^[0-9a-f]{64}$'}
           content:
-            text/csv:
+            application/octet-stream:
               schema: {type: string, format: binary}
-            application/json:
-              schema: {type: object}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "410": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
 
   /jobs:
     post:
@@ -618,6 +665,11 @@ components:
       schema: {type: string, format: uuid}
     ForecastId:
       name: forecastId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ArtifactId:
+      name: artifactId
       in: path
       required: true
       schema: {type: string, format: uuid}
@@ -1161,6 +1213,40 @@ components:
           type: string
           format: date-time
           description: Optional aware UTC-hour boundary backed by a completed hourly bucket
+
+    ForecastExportCreate:
+      type: object
+      additionalProperties: false
+      required: [format]
+      properties:
+        format: {type: string, enum: [csv, chart_json]}
+
+    ExperimentExportCreate:
+      type: object
+      additionalProperties: false
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [metrics_csv, metrics_json, manifest_json]
+
+    ExportArtifact:
+      type: object
+      required:
+        [id, purpose, filename, media_type, size_bytes, sha256, created_at, download_url]
+      properties:
+        id: {type: string, format: uuid}
+        purpose:
+          type: string
+          enum: [forecast_export, metrics, chart, manifest]
+        filename: {type: string}
+        media_type: {type: string}
+        size_bytes: {type: integer, minimum: 0}
+        sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        created_at: {type: string, format: date-time}
+        download_url:
+          type: string
+          format: uri-reference
 
     ForecastPoint:
       type: object
