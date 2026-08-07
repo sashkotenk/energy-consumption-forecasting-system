@@ -22,13 +22,14 @@ function client() {
 
 function experiment(status: ExperimentStatus): ExperimentResponse {
   const now = new Date('2026-08-08T00:00:00Z')
+  const finished = status === ExperimentStatus.Failed || status === ExperimentStatus.Cancelled || status === ExperimentStatus.Completed
   return {
     algorithms: [AlgorithmType.SeasonalNaive24, AlgorithmType.Ridge],
     createdAt: now,
     datasetVersionId: 'version-1',
     failureCode: status === ExperimentStatus.Failed ? 'training_failed' : null,
     failureDetail: status === ExperimentStatus.Failed ? 'training failed for test' : null,
-    finishedAt: [ExperimentStatus.Failed, ExperimentStatus.Cancelled, ExperimentStatus.Completed].includes(status) ? now : null,
+    finishedAt: finished ? now : null,
     id: 'exp-1',
     jobId: 'job-1',
     name: 'Тестовий експеримент',
