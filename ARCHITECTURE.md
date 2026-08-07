@@ -2,7 +2,7 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-05 persistent-job foundation, not the complete business
+The repository currently implements the TASK-06 dataset-upload boundary, not the complete business
 system described by the design documents.
 
 ```text
@@ -24,7 +24,11 @@ checks database references before cleaning up bytes. The job application boundar
 state machine, idempotency and bounded-retry rules. Its PostgreSQL adapter performs atomic short
 claims, records attempt history, heartbeats active work and recovers stale ownership. FastAPI
 provides enqueue/poll/cancel/retry operations, while the separate worker process executes only
-registered handlers. Concrete dataset and ML handlers remain deferred.
+registered handlers. The dataset module now exposes catalog CRUD and import lookup. Multipart
+requests are bounded, sanitized and checked for CSV-like content before a generated-key raw artifact
+is stored. A short PostgreSQL transaction then creates the immutable dataset version, import record,
+and queued job together; failed staging compensates by deleting the unreferenced artifact. Full
+dataset parsing and all ML handlers remain deferred.
 
 ## Intended system architecture
 
@@ -47,8 +51,9 @@ outside the coursework baseline.
 ## Dependency direction
 
 Backend modules keep domain and application policies independent of FastAPI handlers, SQLAlchemy
-sessions, storage paths, and scikit-learn implementations where practical. Readiness and artifact
-and job ports are owned by application-facing modules; the local filesystem and SQLAlchemy adapters
+sessions, storage paths, and scikit-learn implementations where practical. Readiness, artifact and
+job ports are owned by application-facing modules; dataset orchestration likewise depends on catalog
+and artifact ports rather than FastAPI or storage paths. The local filesystem and SQLAlchemy adapters
 remain replaceable infrastructure details. Handler code depends on a job execution context rather
 than directly on FastAPI or a SQLAlchemy session.
 
@@ -79,5 +84,9 @@ These documents describe planned and implemented components. Runtime OpenAPI for
   configured absolute root.
 - Artifact writes use a same-directory temporary file and atomic no-overwrite publication; failed
   streams and failed metadata persistence are cleaned up.
+- Dataset uploads enforce the 300 MB application limit while streaming to storage, accept only
+  generated-key `.csv`/`.txt` artifacts, sanitize client metadata, and inspect actual tabular text.
+- Dataset deletion is rejected once immutable versions/imports exist; it never cascades into artifact
+  byte deletion.
 - Future model loading may accept only internally produced, checksum-verified bundles.
 - Time-series preprocessing must preserve chronological order and prevent future-data leakage.

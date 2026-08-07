@@ -112,6 +112,7 @@ paths:
       operationId: deleteDataset
       responses:
         "204": {description: Deleted}
+        "404": {$ref: "#/components/responses/Problem"}
         "409": {$ref: "#/components/responses/Problem"}
 
   /datasets/{datasetId}/imports:
@@ -130,7 +131,9 @@ paths:
           description: Import accepted
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/AcceptedJob"}
+              schema: {$ref: "#/components/schemas/DatasetImportAccepted"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
         "413": {$ref: "#/components/responses/Problem"}
         "422": {$ref: "#/components/responses/Problem"}
 
@@ -575,21 +578,21 @@ components:
       required: [name]
       properties:
         name: {type: string, minLength: 1, maxLength: 160}
-        description: {type: string, maxLength: 2000}
+        description: {type: [string, "null"], maxLength: 2000}
 
     DatasetUpdate:
       type: object
       properties:
         name: {type: string, minLength: 1, maxLength: 160}
-        description: {type: string, maxLength: 2000}
+        description: {type: [string, "null"], maxLength: 2000}
 
     Dataset:
       type: object
-      required: [id, name, version_count, created_at]
+      required: [id, name, description, version_count, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         name: {type: string}
-        description: {type: string}
+        description: {type: [string, "null"]}
         version_count: {type: integer}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -610,14 +613,14 @@ components:
       properties:
         file: {type: string, format: binary}
         import_profile: {type: string, enum: [uci, generic_csv]}
-        delimiter: {type: string, maxLength: 1}
+        delimiter: {type: string, minLength: 1, maxLength: 1}
         decimal_separator: {type: string, enum: [".", ","]}
-        timestamp_column: {type: string}
-        timestamp_format: {type: string}
+        timestamp_column: {type: string, maxLength: 160}
+        timestamp_format: {type: string, maxLength: 160}
         timestamp_semantics: {type: string, enum: [interval_start, interval_end]}
-        timezone: {type: string}
-        energy_column: {type: string}
-        power_column: {type: string}
+        timezone: {type: string, maxLength: 80}
+        energy_column: {type: string, maxLength: 160}
+        power_column: {type: string, maxLength: 160}
         unit: {type: string, enum: [kwh, wh, kw, w]}
         duplicate_policy:
           type: string
@@ -631,16 +634,27 @@ components:
         status: {type: string, const: queued}
         resource_id: {type: string, format: uuid}
 
+    DatasetImportAccepted:
+      type: object
+      required: [import_id, job_id, status]
+      properties:
+        import_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        status: {type: string, const: queued}
+
     DatasetImport:
       type: object
-      required: [id, dataset_id, status, job_id, created_at]
+      required:
+        [id, dataset_id, dataset_version_id, job_id, import_profile,
+         status, import_options, detected_format, created_at]
       properties:
         id: {type: string, format: uuid}
         dataset_id: {type: string, format: uuid}
         dataset_version_id: {type: string, format: uuid}
         job_id: {type: string, format: uuid}
+        import_profile: {type: string, enum: [uci, generic_csv]}
         status: {type: string}
-        preview: {type: object}
+        import_options: {type: object}
         detected_format: {type: object}
         created_at: {type: string, format: date-time}
 

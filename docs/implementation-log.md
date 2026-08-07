@@ -377,3 +377,83 @@ attempt-evidence policy. The additive migration creates one table, two indexes a
 column; it does not rewrite existing jobs. API clients gain `POST /jobs` and implemented
 `GET /jobs/{jobId}`, cancel and retry operations. Existing health and artifact contracts are
 unchanged.
+
+## TASK-06 — Dataset catalog and upload staging
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** dataset list/detail/create/update/delete; paginated metadata queries; dataset-import
+lookup; multipart upload staging; 300 MiB streamed application limit; original-name and import-option
+sanitization; extension allowlist plus actual UTF-8 CSV-like content inspection; immutable raw
+artifact persistence; and atomic creation of dataset version, import record and queued import job.
+Full UCI/generic CSV row parsing and the worker import handler remain assigned to TASK-07.
+
+### Upload and persistence contract
+
+- Client filenames remain sanitized metadata only. Artifact keys are opaque generated UUID values;
+  neither API response contains a storage key or filesystem path.
+- `.csv` and `.txt` are allowlisted, but extension and declared media type are insufficient. A bounded
+  sample must decode as UTF-8 tabular text with a consistent supported delimiter and at least two
+  rows and columns; binary signatures, NUL bytes, HTML/XML/JSON-like content and malformed samples
+  are rejected.
+- The full stream is limited by `MAX_UPLOAD_BYTES` while the artifact adapter writes it. The default
+  is exactly 314,572,800 bytes (300 MiB). Oversized and interrupted streams leave neither completed
+  bytes nor artifact metadata.
+- Artifact bytes and SHA-256 metadata are committed before a short, dataset-row-locked transaction
+  creates the immutable `dataset_versions`, `dataset_imports` and `jobs` rows. A database failure
+  compensates by deleting the still-unreferenced artifact.
+- Dataset deletion succeeds only for empty catalog metadata. Existing versions/imports return
+  `409 dataset_in_use`; the endpoint never cascades into raw artifact deletion.
+- Duplicate source checksums within one dataset return `409 dataset_source_conflict`; the redundant
+  artifact created during staging is compensatingly removed.
+
+### Resolved dependency addition
+
+The exact transitive graph remains recorded in `backend/uv.lock`.
+
+| Package | Resolved version | Purpose |
+|---|---:|---|
+| python-multipart | 0.0.32 | FastAPI multipart form and upload parsing |
+
+### Verification evidence
+
+Commands were run from the locations required by the engineering instructions. The local shell did
+not expose a bare `uv` executable, so the repository-supported `python -m uv` form was used.
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_dataset_upload_security.py -q` | exit 0; 10 passed, 0 failed, 0 skipped in 0.12 s |
+| `backend` | `python -m uv run pytest tests/integration/test_dataset_api.py -q` | exit 0; 7 passed, 0 failed, 0 skipped in 66.00 s against disposable PostgreSQL databases and temporary artifact roots |
+| `backend` | `python -m uv run --env-file ../.env python -c "...Settings..."` | exit 0; local host/port, artifact root, 300 MiB limit, two CORS origins and configured database presence validated without printing the secret |
+| `backend` | transient `python -m uv run --with pyyaml` static/runtime OpenAPI assertion | exit 0; design YAML parsed and seven dataset operations, multipart responses, tags, pagination default and path non-disclosure aligned |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 234 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv sync --all-groups` | exit 0; 47 locked packages resolved and checked |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 56 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 51 source files |
+| `backend` via full gate | `python -m uv run alembic upgrade head` | exit 0; database already at revision `8b31f6f2d912` |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 91 collected, 91 passed, 0 failed, 0 skipped in 185.26 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+One intermediate integration run exposed SQLAlchemy flush ordering between the new version/job rows
+and the import row: 6 tests passed and the accepted-upload scenario failed with one foreign-key
+violation. The repository now flushes the version and job before the import within the same database
+transaction. Its targeted rerun passed, the complete dataset integration file passed 7/7, and the
+subsequent full gate passed all 91 backend tests.
+
+### Contract and architecture impact
+
+The runtime API and design OpenAPI now agree on dataset CRUD, the multipart import endpoint,
+`DatasetImportAccepted`, import lookup, Problem Details responses and pagination defaults. The
+existing TASK-03 schema already models the required raw artifact, dataset version, import and job
+relationships, so no migration or DDL shape change was necessary; `alembic check` confirms no drift.
+No ADR was added because the implementation follows the accepted upload, immutability and job
+architecture without deviation. Architecture, traceability and runbooks now distinguish staging
+from the TASK-07 parsing responsibility.

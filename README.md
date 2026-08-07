@@ -6,7 +6,8 @@ EnergyForecast is a course-project software system for analysing hourly electric
 
 ## Current status
 
-TASK-05 extends the persistence and artifact foundations with a PostgreSQL-backed job queue:
+TASK-06 adds the dataset catalog and secure upload-staging workflow on top of the persistence,
+artifact, and job foundations:
 
 - an installable Python 3.13 `src`-layout package managed by uv;
 - typed environment configuration with production startup validation;
@@ -22,14 +23,18 @@ TASK-05 extends the persistence and artifact foundations with a PostgreSQL-backe
 - handler registry, heartbeat/progress reporting, cooperative cancellation, bounded retry, and
   stale-worker recovery;
 - idempotent enqueue, polling, cancel, and retry endpoints with retained attempt evidence;
+- dataset list/detail/create/update/delete endpoints with pagination and dependency-safe deletion;
+- bounded multipart `.csv`/`.txt` staging with filename and option sanitization plus content checks;
+- immutable raw artifacts and atomic dataset-version/import/job creation returning `202 Accepted`;
 - separate runnable API and worker processes from the same backend package;
 - a Vite React TypeScript application managed by npm;
 - linting, formatting, type checking, unit smoke tests, and production builds;
 - separate cached backend and frontend GitHub Actions jobs.
 
-Dataset upload/import APIs, concrete job handlers, and ML pipelines are intentionally deferred to
-later tasks. The worker claims only job types registered by those modules, so unsupported queued
-work remains durable instead of being failed by an incomplete handler set.
+Full UCI/generic CSV parsing, concrete dataset-import handlers, and ML pipelines are intentionally
+deferred to later tasks. The request path validates and stores the file but never parses millions of
+rows. The worker claims only job types registered by those modules, so the staged import remains
+durable until its handler is introduced.
 
 ## Toolchain
 
@@ -129,8 +134,7 @@ Start the API with the host-accessible database URL:
 
 ```powershell
 Set-Location backend
-$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
-python -m uv run energy-forecast-api
+python -m uv run --env-file ../.env energy-forecast-api
 ```
 
 Open `http://localhost:8000/docs` or request `http://localhost:8000/health/ready`. Stop the local
@@ -140,8 +144,7 @@ Start the independent worker in another terminal with the same `DATABASE_URL`:
 
 ```powershell
 Set-Location backend
-$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
-python -m uv run energy-forecast-worker
+python -m uv run --env-file ../.env energy-forecast-worker
 ```
 
 ## Architecture and contracts

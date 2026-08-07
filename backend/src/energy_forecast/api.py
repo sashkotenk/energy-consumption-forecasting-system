@@ -11,12 +11,18 @@ from fastapi.openapi.utils import get_openapi
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from energy_forecast import __version__
+from energy_forecast.artifacts.local import LocalArtifactStore
+from energy_forecast.artifacts.service import ArtifactService
 from energy_forecast.config import Service, Settings
 from energy_forecast.database import (
+    SqlAlchemyArtifactMetadataRepository,
+    SqlAlchemyDatasetCatalogRepository,
     SqlAlchemyJobQueue,
     create_database_engine,
     create_session_factory,
 )
+from energy_forecast.datasets.api import create_dataset_router
+from energy_forecast.datasets.service import DatasetService
 from energy_forecast.errors import PROBLEM_MEDIA_TYPE, install_exception_handlers
 from energy_forecast.health import (
     DatabaseReadinessCheck,
@@ -34,12 +40,17 @@ def create_app(
     settings: Settings | None = None,
     readiness_check: ReadinessCheck | None = None,
     job_queue: JobQueue | None = None,
+    dataset_service: DatasetService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
     configure_logging(resolved_settings)
     resolved_check = readiness_check or _default_readiness_check(resolved_settings)
-    engine, resolved_queue = _default_job_queue(resolved_settings, job_queue)
+    engine, resolved_queue, resolved_dataset_service = _default_application_services(
+        resolved_settings,
+        job_queue,
+        dataset_service,
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -60,17 +71,33 @@ def create_app(
     install_exception_handlers(application)
     application.include_router(create_health_router(resolved_check))
     application.include_router(create_job_router(resolved_queue))
+    application.include_router(create_dataset_router(resolved_dataset_service))
     _install_openapi_contract(application)
     return application
 
 
-def _default_job_queue(
-    settings: Settings, queue: JobQueue | None
-) -> tuple[AsyncEngine | None, JobQueue | None]:
-    if queue is not None or settings.database_url is None:
-        return None, queue
+def _default_application_services(
+    settings: Settings,
+    queue: JobQueue | None,
+    dataset_service: DatasetService | None,
+) -> tuple[AsyncEngine | None, JobQueue | None, DatasetService | None]:
+    if settings.database_url is None:
+        return None, queue, dataset_service
     engine = create_database_engine(settings.database_url.get_secret_value())
-    return engine, SqlAlchemyJobQueue(create_session_factory(engine))
+    session_factory = create_session_factory(engine)
+    resolved_queue = queue or SqlAlchemyJobQueue(session_factory)
+    if dataset_service is not None:
+        return engine, resolved_queue, dataset_service
+    artifacts = ArtifactService(
+        LocalArtifactStore(settings.artifact_root),
+        SqlAlchemyArtifactMetadataRepository(session_factory),
+    )
+    resolved_dataset_service = DatasetService(
+        SqlAlchemyDatasetCatalogRepository(session_factory),
+        artifacts,
+        max_upload_bytes=settings.max_upload_bytes,
+    )
+    return engine, resolved_queue, resolved_dataset_service
 
 
 def _default_readiness_check(settings: Settings) -> ReadinessCheck:
