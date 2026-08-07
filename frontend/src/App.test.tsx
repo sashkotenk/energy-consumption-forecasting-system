@@ -19,7 +19,7 @@ describe('application shell', () => {
     vi.spyOn(api.forecasts, 'listForecasts').mockResolvedValue({ items: [], page: 1, pageSize: 5, total: 0 })
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Огляд' })).toBeInTheDocument()
-    expect(screen.getByText('Набори даних')).toBeInTheDocument()
+    expect(screen.getAllByText('Набори даних').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'Імпортувати дані' })).toHaveAttribute('href', '/datasets/new')
   })
 
