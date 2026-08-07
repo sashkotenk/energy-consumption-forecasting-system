@@ -7,6 +7,14 @@ import { downloadControlledArtifact } from '../shared/api/download'
 import { isTerminalJob, useJobPolling } from '../shared/query/useJobPolling'
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '../shared/ui/States'
 
+function isTerminalExperiment(status: ExperimentStatus) {
+  return status === ExperimentStatus.Completed || status === ExperimentStatus.Cancelled || status === ExperimentStatus.Failed
+}
+
+function isActiveExperiment(status: ExperimentStatus) {
+  return status === ExperimentStatus.Queued || status === ExperimentStatus.Running || status === ExperimentStatus.Cancelling
+}
+
 export function ExperimentDetailsPage() {
   const { experimentId } = useParams()
   const experiment = useQuery({
@@ -14,7 +22,7 @@ export function ExperimentDetailsPage() {
     queryFn: () => api.experiments.getExperiment({ experimentId: experimentId! }),
     enabled: Boolean(experimentId),
   })
-  const job = useJobPolling(experiment.data?.jobId, Boolean(experiment.data) && ![ExperimentStatus.Completed, ExperimentStatus.Cancelled, ExperimentStatus.Failed].includes(experiment.data!.status))
+  const job = useJobPolling(experiment.data?.jobId, Boolean(experiment.data) && !isTerminalExperiment(experiment.data!.status))
 
   useEffect(() => {
     if (isTerminalJob(job.data?.status)) void experiment.refetch()
@@ -40,7 +48,7 @@ export function ExperimentDetailsPage() {
   if (!experiment.data) return <EmptyState title="Експеримент не знайдено" />
 
   const data = experiment.data
-  const running = [ExperimentStatus.Queued, ExperimentStatus.Running, ExperimentStatus.Cancelling].includes(data.status)
+  const running = isActiveExperiment(data.status)
   const failed = data.status === ExperimentStatus.Failed
   const cancelled = data.status === ExperimentStatus.Cancelled
   const completed = data.status === ExperimentStatus.Completed
