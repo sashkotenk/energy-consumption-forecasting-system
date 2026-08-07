@@ -16,10 +16,12 @@ The project can currently:
 - train direct Ridge, Random Forest and HistGradientBoosting models;
 - run queued experiments with four-fold chronological validation and deterministic model selection;
 - compare persisted fold/horizon metrics and save checksum-verified model bundles;
-- create reproducible 24-hour forecasts with provenance and a daily energy total.
+- create reproducible 24-hour forecasts with provenance and a daily energy total;
+- export forecast CSV and chart-ready JSON plus experiment metrics/manifest data as checksum-tracked
+  artifacts, then download only export-purpose artifacts through a controlled endpoint.
 
 The API is built with FastAPI, PostgreSQL and TimescaleDB. The frontend is still a small React/Vite
-shell. The experiment/forecast UI and controlled exports are the next parts of the project.
+shell. The experiment/forecast UI and generated API client are the next parts of the project.
 
 ## Toolchain
 
