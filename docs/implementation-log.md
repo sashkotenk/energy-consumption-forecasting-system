@@ -711,3 +711,49 @@ while asyncpg opened a connection. `configure_logging` now re-enables and normal
 `energy_forecast.*` logger, with a regression test. The former failing order then passed 15/15, the
 unchanged worker lifecycle tests passed 2/2, and the final full gate passed all 116 selected tests
 without relaxing any timeout or suppressing tests.
+
+## TASK-11 — Feature pipeline, targets and leakage guard
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** pure versioned lag, shifted rolling, local calendar and optional past-quality features;
+direct 24-output targets; deterministic schema metadata and SHA-256; four expanding 2009 validation
+folds; a 24-hour target purge; isolated 2010 final-test indexes; and a fresh train-only preprocessing
+hook for every fold.
+
+### Feature and split contract
+
+- `base_v1` has a stable order of eight lags, eight rolling statistics and eleven calendar/cyclic
+  values. `base_quality_v1` appends three past-only quality signals.
+- Hourly facts are ordered and made continuous in UTC. Missing timestamps remain null, so required
+  history is never silently filled and incomplete rows are not eligible.
+- Targets are ordered from `t+1` to `t+24`. Feature construction and target construction are separate
+  operations over the same immutable input.
+- The cross-validation API returns only the four 2009 validation quarters. Every fold requires
+  `last_train_origin + 24 hours < first_validation_origin`; 2010 indexes are available only through
+  the separate final-test method.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest -m ml_guard -q` | exit 0; 15 passed, 118 deselected in 2.64 s |
+| `backend` | `python -m uv run ruff check src\\energy_forecast\\ml tests\\unit\\test_ml_guard.py` | exit 0; all checks passed |
+| `backend` | `python -m uv run ruff format --check src\\energy_forecast\\ml tests\\unit\\test_ml_guard.py` | exit 0; 4 files already formatted |
+| `backend` | `python -m uv run mypy src\\energy_forecast\\ml tests\\unit\\test_ml_guard.py` | exit 0; no issues in 4 source files |
+| repository root | `.\\scripts\\verify.ps1` | exit 0 in 264.7 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 94 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 86 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 133 collected, 2 performance tests deselected, 131 passed in 218.44 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+ADR-019 records the feature timing, purge, final-test isolation and schema identity decisions. No API,
+database schema or migration changes are required for this pure domain layer.

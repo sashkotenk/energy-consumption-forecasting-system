@@ -1,51 +1,21 @@
 # EnergyForecast
 
-EnergyForecast is a course-project software system for analysing hourly electricity consumption and producing a direct 24-hour forecast with machine-learning methods.
+EnergyForecast is my course project for importing electricity readings, preparing an hourly time
+series and forecasting consumption for the next 24 hours.
 
-> Українською: EnergyForecast — програмна система для аналізу погодинного споживання електроенергії та формування прямого прогнозу на наступні 24 години методами машинного навчання.
+## What works now
 
-## Current status
+The project can currently:
 
-TASK-10 adds bounded analytical queries on top of streaming ingestion, deterministic quality
-evaluation, immutable hourly transformations, persistence, artifact, and job foundations:
+- upload UCI or mapped CSV data and process imports in a background worker;
+- keep raw uploads and prepared dataset versions separate;
+- report data-quality problems, clean short gaps and aggregate readings by hour;
+- calculate summaries, profiles, heatmaps, distributions and bounded time series;
+- build leakage-safe lag, rolling and calendar features with direct 24-hour targets;
+- create the four chronological validation folds used by the ML experiments.
 
-- an installable Python 3.13 `src`-layout package managed by uv;
-- typed environment configuration with production startup validation;
-- FastAPI liveness/readiness routes, request IDs, JSON logs, and Problem Details errors;
-- SQLAlchemy 2.x mappings for the `app`, `ts`, and `ml` schemas;
-- Alembic migrations for all tables, constraints, indexes and TimescaleDB hypertables;
-- a pinned TimescaleDB 2.28.3 / PostgreSQL 17 Compose database;
-- explicit async session and transaction boundaries with repository integration tests;
-- an application-owned artifact port and a local filesystem adapter with generated opaque keys;
-- streamed SHA-256/size calculation, atomic collision-safe publication, and failed-write cleanup;
-- PostgreSQL artifact metadata, checksum lookup, controlled reads, and reference-checked deletion;
-- atomic multi-worker claims through short `FOR UPDATE SKIP LOCKED` transactions;
-- handler registry, heartbeat/progress reporting, cooperative cancellation, bounded retry, and
-  stale-worker recovery;
-- idempotent enqueue, polling, cancel, and retry endpoints with retained attempt evidence;
-- dataset list/detail/create/update/delete endpoints with pagination and dependency-safe deletion;
-- bounded multipart `.csv`/`.txt` staging with filename and option sanitization plus content checks;
-- immutable raw artifacts and atomic dataset-version/import/job creation returning `202 Accepted`;
-- fixed official-nine-column UCI parsing and explicitly mapped generic CSV parsing;
-- bounded structural preview, delimiter/decimal detection, timezone and target-unit normalization;
-- chunked raw-measurement inserts with source-row parse errors and restart-safe worker attempts;
-- versioned quality reports for order, interval, gaps, duplicates, missing/non-finite values,
-  physical invalidity and informational robust-z anomalies;
-- bounded, paginated quality issue evidence through the dataset-version API;
-- explicit duplicate resolution and bounded linear interpolation of gaps up to five minutes;
-- interval-aware energy integration, unscaled partial hours, and persisted hourly coverage evidence;
-- immutable derived dataset versions with reproducible transformation manifests and worker jobs;
-- scoped summary, series, local-time profile, heatmap and distribution analytics endpoints;
-- deterministic UTC-anchored server aggregation with enforced range and point-count bounds;
-- explicit kWh, timezone, coverage and quality metadata for every analytical response;
-- separate runnable API and worker processes from the same backend package;
-- a Vite React TypeScript application managed by npm;
-- linting, formatting, type checking, unit smoke tests, and production builds;
-- separate cached backend and frontend GitHub Actions jobs.
-
-ML pipelines remain assigned to later tasks. Raw invalid values and statistical peaks remain
-immutable evidence; transformations materialize a new version without changing source rows or raw
-artifacts, and analytics only reads those materialized hourly facts.
+The API is built with FastAPI, PostgreSQL and TimescaleDB. The frontend is still a small React/Vite
+shell. Model training and forecast endpoints are the next parts of the project.
 
 ## Toolchain
 
@@ -106,7 +76,7 @@ npm run build
 
 The starter interface and user-facing text are Ukrainian, while code and technical documentation use English.
 
-## Verify the complete baseline
+## Run all checks
 
 On PowerShell, run from the repository root:
 
@@ -166,10 +136,6 @@ python -m uv run --env-file ../.env energy-forecast-worker
 - [`docs/diagrams/`](docs/diagrams/) — C4, UML, sequence, ER, deployment, and ML diagrams;
 - [`docs/sad/SAD_draft_v0.1.md`](docs/sad/SAD_draft_v0.1.md) — draft Software Architecture Document;
 - [`docs/architecture/traceability.csv`](docs/architecture/traceability.csv) — requirement traceability baseline.
-
-## Environment configuration
-
-Copy `.env.example` to `.env` only when a later runtime task requires it. Never commit `.env` or real credentials.
 
 ## License
 

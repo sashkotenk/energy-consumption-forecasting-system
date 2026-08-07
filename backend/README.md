@@ -25,7 +25,7 @@ lookup, `/docs`, and `/openapi.json`. Readiness
 returns `503 application/problem+json` until `DATABASE_URL` points to an available PostgreSQL
 database. `uv run energy-forecast-worker` starts the independent PostgreSQL polling process.
 
-## Environment configuration
+## Runtime settings
 
 Settings are read from process environment variables and validated during process startup. See
 the repository `.env.example` for the complete current list. `APP_PORT`, `MAX_UPLOAD_BYTES`,
