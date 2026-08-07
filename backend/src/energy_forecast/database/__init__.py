@@ -16,6 +16,9 @@ from energy_forecast.database.session import (
     create_session_factory,
     transactional_session,
 )
+from energy_forecast.database.transformation_repository import (
+    SqlAlchemyTransformationRepository,
+)
 
 __all__ = [
     "AsyncSessionFactory",
@@ -25,6 +28,7 @@ __all__ = [
     "SqlAlchemyDatasetImportRepository",
     "SqlAlchemyJobQueue",
     "SqlAlchemyQualityRepository",
+    "SqlAlchemyTransformationRepository",
     "create_database_engine",
     "create_session_factory",
     "transactional_session",

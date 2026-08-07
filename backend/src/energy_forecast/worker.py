@@ -16,6 +16,7 @@ from energy_forecast.database import (
     SqlAlchemyDatasetImportRepository,
     SqlAlchemyJobQueue,
     SqlAlchemyQualityRepository,
+    SqlAlchemyTransformationRepository,
     create_database_engine,
     create_session_factory,
 )
@@ -24,6 +25,7 @@ from energy_forecast.jobs.domain import JobType
 from energy_forecast.jobs.worker import JobHandlerRegistry, JobWorker
 from energy_forecast.logging_config import configure_logging
 from energy_forecast.quality.service import QualityService
+from energy_forecast.transformations.service import TransformationHandler
 
 
 async def run_worker(settings: Settings, registry: JobHandlerRegistry | None = None) -> None:
@@ -50,6 +52,10 @@ async def run_worker(settings: Settings, registry: JobHandlerRegistry | None = N
                 artifacts,
                 quality_evaluator=quality_service,
             ),
+        )
+        resolved_registry.register(
+            JobType.DATA_TRANSFORMATION,
+            TransformationHandler(SqlAlchemyTransformationRepository(session_factory)),
         )
     else:
         resolved_registry = registry

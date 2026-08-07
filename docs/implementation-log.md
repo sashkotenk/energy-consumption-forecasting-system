@@ -584,3 +584,68 @@ One intermediate complete-gate rerun reported 103 passed and one timeout in the 
 two-second cooperative-cancellation integration test while opening a new database connection. The
 unchanged test immediately passed 2/2 in isolation, and the subsequent complete gate above passed all
 104 selected backend tests. No timeout, test suppression or production job behavior was changed.
+
+## TASK-09 — Controlled cleaning and hourly aggregation
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** immutable derived dataset versions; explicit duplicate policy; bounded linear
+interpolation; interval-aware energy integration; hourly aggregation; persisted coverage, imputation,
+missing-run and quality evidence; asynchronous transformation API and worker handler; and restart-safe
+TimescaleDB materialization.
+
+### Transformation contract
+
+- A request creates a child version, transformation run and queued job in one transaction. The source
+  raw rows and artifact reference are unchanged, while the child manifest records source, policy,
+  engine and summary.
+- Exact duplicates collapse deterministically. Conflicting duplicates follow `reject`, `keep_first`,
+  `keep_last` or `mean`; the default `reject` produces `invalid_conflict` evidence.
+- Linear interpolation applies only to bounded gaps no longer than five minutes with valid values on
+  both sides, including gaps that cross an hour boundary. Dataset boundaries are never imputed.
+- Active power is integrated as `sum(P * interval_seconds / 3600)` and energy samples are summed.
+  Partial hours retain their measured partial energy and are never divided by coverage.
+- Every hourly fact stores observed/expected counts, coverage, imputed count, maximum missing run,
+  flags and status. Only `complete` and `imputed_short_gap` are training-ready. Entirely unavailable
+  energy is SQL null, never zero.
+- Retried jobs delete only the target version's earlier hourly batches before recomputation. The
+  original version and raw artifact remain immutable.
+
+### Schema and architecture changes
+
+Migration `a842d6c4b109` makes `ts.hourly_observations.energy_kwh` nullable while retaining its
+non-negative check, which preserves the missing-versus-zero distinction. ADR-017 records immutable
+child-version provenance, interpolation and unscaled-energy decisions. Runtime OpenAPI, design
+OpenAPI, DDL, traceability and the architecture snapshot now match the implemented pipeline.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `.\.venv\Scripts\pytest.exe tests/unit/test_transformation_engine.py -q` | exit 0; 8 passed, 0 failed in 0.08 s |
+| `backend` | `$env:TEST_DATABASE_URL=...; .\.venv\Scripts\pytest.exe tests/integration/test_transformation_pipeline.py -q` | exit 0; 1 passed, 0 failed in 14.01 s against a disposable TimescaleDB database |
+| `backend` | `.\.venv\Scripts\pytest.exe tests/unit -q` | exit 0; 82 passed, 0 failed in 8.04 s |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 236.9 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 83 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 75 source files |
+| `backend` via full gate | `python -m uv run alembic upgrade head` | exit 0; upgraded `71e4b5ca9021 -> a842d6c4b109` |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 114 collected, 1 performance test deselected, 113 passed, 0 failed in 193.44 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+The first transformation E2E run exposed that handlers may report at most 99% while running; the
+queue itself owns the successful transition to 100%. The transformation handler and the earlier
+dataset-import handler now respect that contract. The rerun and complete gate passed without changing
+timeouts or suppressing tests.
+
+One intermediate complete-gate rerun reproduced the pre-existing two-second cooperative-cancellation
+timeout while asyncpg was opening a connection: 111 tests passed and one timed out. The unchanged
+worker lifecycle file immediately passed 2/2 in isolation (18.84 s), and the final complete gate
+passed all 113 selected backend tests. No timeout or production queue behavior was relaxed.

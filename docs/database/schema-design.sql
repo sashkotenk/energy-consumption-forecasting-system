@@ -260,7 +260,7 @@ CREATE TABLE ts.hourly_observations (
         REFERENCES app.dataset_versions(id) ON DELETE CASCADE,
     hour_start timestamptz NOT NULL,
     timezone_context varchar(80),
-    energy_kwh double precision NOT NULL CHECK (energy_kwh >= 0),
+    energy_kwh double precision CHECK (energy_kwh IS NULL OR energy_kwh >= 0),
     mean_active_power_kw double precision CHECK (mean_active_power_kw IS NULL OR mean_active_power_kw >= 0),
     mean_reactive_power_kw double precision CHECK (mean_reactive_power_kw IS NULL OR mean_reactive_power_kw >= 0),
     mean_voltage_v double precision CHECK (mean_voltage_v IS NULL OR mean_voltage_v > 0),

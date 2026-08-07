@@ -2,7 +2,7 @@
 
 ## Implemented snapshot
 
-The repository currently implements the TASK-08 data-quality boundary, not the complete business
+The repository currently implements the TASK-09 transformation boundary, not the complete business
 system described by the design documents.
 
 ```text
@@ -27,8 +27,11 @@ provides enqueue/poll/cancel/retry operations, while the separate worker process
 registered handlers. The dataset module now exposes catalog CRUD and import lookup. Multipart
 requests are bounded, sanitized and checked for CSV-like content before a generated-key raw artifact
 is stored. A short PostgreSQL transaction then creates the immutable dataset version, import record,
-and queued job together; failed staging compensates by deleting the unreferenced artifact. Full
-dataset parsing and all ML handlers remain deferred.
+and queued job together; failed staging compensates by deleting the unreferenced artifact. Dataset
+imports produce versioned quality evidence. Accepted transformations atomically create a child
+version, run and job. The worker applies the recorded duplicate/interpolation policy, integrates
+interval power without scaling incomplete hours, and persists quality-labelled hourly facts in
+TimescaleDB through restart-safe batches. Analytics and all ML handlers remain deferred.
 
 ## Intended system architecture
 
@@ -90,3 +93,5 @@ These documents describe planned and implemented components. Runtime OpenAPI for
   byte deletion.
 - Future model loading may accept only internally produced, checksum-verified bundles.
 - Time-series preprocessing must preserve chronological order and prevent future-data leakage.
+- A transformation never edits its source version or raw artifact; the child version records source,
+  engine, policy, summary, coverage, interpolation and hourly quality status.
