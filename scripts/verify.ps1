@@ -46,6 +46,7 @@ try {
     Invoke-Uv -Arguments @("run", "ruff", "check", ".")
     Invoke-Uv -Arguments @("run", "ruff", "format", "--check", ".")
     Invoke-Uv -Arguments @("run", "mypy", "src", "tests")
+    Invoke-Uv -Arguments @("run", "python", "../scripts/export_openapi.py", "--check")
     Invoke-Uv -Arguments @("run", "alembic", "upgrade", "head")
     Invoke-Uv -Arguments @("run", "alembic", "check")
     Invoke-Uv -Arguments @("run", "pytest", "-m", "not performance")
@@ -58,6 +59,8 @@ Push-Location (Join-Path $repositoryRoot "frontend")
 try {
     npm ci
     Assert-LastExitCode -CommandName "npm ci"
+    npm run api:check
+    Assert-LastExitCode -CommandName "npm run api:check"
     npm run lint
     Assert-LastExitCode -CommandName "npm run lint"
     npm run typecheck

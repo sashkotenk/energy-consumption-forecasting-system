@@ -66,6 +66,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
 
     @router.post(
         "/forecasts/{forecastId}/exports",
+        operation_id="createForecastExport",
         status_code=HTTPStatus.CREATED,
         response_model=ExportArtifactResponse,
         responses={
@@ -89,6 +90,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
 
     @router.post(
         "/experiments/{experimentId}/exports",
+        operation_id="createExperimentExport",
         status_code=HTTPStatus.CREATED,
         response_model=ExportArtifactResponse,
         responses={
@@ -112,8 +114,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
                 code="export_source_failed",
                 title="Результат експорту недоступний",
                 detail=(
-                    "Експеримент завершився помилкою і не має "
-                    "успішного результату для експорту."
+                    "Експеримент завершився помилкою і не має успішного результату для експорту."
                 ),
             ) from error
         except ExportSourceUnavailableError as error:
@@ -122,6 +123,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
 
     @router.get(
         "/artifacts/{artifactId}/download",
+        operation_id="downloadExportArtifact",
         response_class=StreamingResponse,
         responses={
             HTTPStatus.OK: _DOWNLOAD_RESPONSE,
@@ -140,10 +142,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
                 status=HTTPStatus.NOT_FOUND,
                 code="export_artifact_not_found",
                 title="Файл експорту не знайдено",
-                detail=(
-                    "Запитаний файл експорту не існує "
-                    "або вже видалений."
-                ),
+                detail=("Запитаний файл експорту не існує або вже видалений."),
             ) from error
         except ExportArtifactPurposeError as error:
             raise ApiProblem(
@@ -151,8 +150,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
                 code="export_artifact_forbidden",
                 title="Завантаження артефакту заборонено",
                 detail=(
-                    "Цей тип артефакту не призначений для "
-                    "завантаження через endpoint експорту."
+                    "Цей тип артефакту не призначений для завантаження через endpoint експорту."
                 ),
             ) from error
         except ExportArtifactUnavailableError as error:
@@ -161,8 +159,7 @@ def create_export_router(service: ExportService | None) -> APIRouter:
                 code="export_artifact_unavailable",
                 title="Файл експорту недоступний",
                 detail=(
-                    "Метадані експорту існують, але збережений "
-                    "файл відсутній або недоступний."
+                    "Метадані експорту існують, але збережений файл відсутній або недоступний."
                 ),
             ) from error
 
@@ -214,10 +211,7 @@ def _require(service: ExportService | None) -> ExportService:
             status=HTTPStatus.SERVICE_UNAVAILABLE,
             code="exports_unavailable",
             title="Сервіс експорту недоступний",
-            detail=(
-                "Налаштуйте підключення до бази даних і "
-                "сховища артефактів."
-            ),
+            detail=("Налаштуйте підключення до бази даних і сховища артефактів."),
         )
     return service
 
@@ -236,8 +230,5 @@ def _source_not_ready() -> ApiProblem:
         status=HTTPStatus.CONFLICT,
         code="export_source_not_ready",
         title="Результат експорту ще недоступний",
-        detail=(
-            "Експорт можна створити лише з успішно "
-            "завершеного ресурсу."
-        ),
+        detail=("Експорт можна створити лише з успішно завершеного ресурсу."),
     )

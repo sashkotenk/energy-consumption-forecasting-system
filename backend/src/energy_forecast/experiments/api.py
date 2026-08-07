@@ -103,7 +103,12 @@ class ComparisonResponse(BaseModel):
 def create_experiment_router(service: ExperimentService | None) -> APIRouter:
     router = APIRouter()
 
-    @router.get("/algorithms", tags=["Experiments"], response_model=tuple[AlgorithmResponse, ...])
+    @router.get(
+        "/algorithms",
+        tags=["Experiments"],
+        operation_id="listAlgorithms",
+        response_model=tuple[AlgorithmResponse, ...],
+    )
     async def list_algorithms() -> tuple[AlgorithmResponse, ...]:
         return tuple(
             AlgorithmResponse(
@@ -119,6 +124,7 @@ def create_experiment_router(service: ExperimentService | None) -> APIRouter:
     @router.post(
         "/experiments",
         tags=["Experiments"],
+        operation_id="createExperiment",
         status_code=HTTPStatus.ACCEPTED,
         response_model=ExperimentAccepted,
         responses={
@@ -151,7 +157,12 @@ def create_experiment_router(service: ExperimentService | None) -> APIRouter:
             experiment_id=staged.experiment_id, job_id=staged.job_id, status=staged.status
         )
 
-    @router.get("/experiments", tags=["Experiments"], response_model=ExperimentPageResponse)
+    @router.get(
+        "/experiments",
+        tags=["Experiments"],
+        operation_id="listExperiments",
+        response_model=ExperimentPageResponse,
+    )
     async def list_experiments(
         page: PageNumber = 1, page_size: PageSize = 20
     ) -> ExperimentPageResponse:
@@ -166,6 +177,7 @@ def create_experiment_router(service: ExperimentService | None) -> APIRouter:
     @router.get(
         "/experiments/{experimentId}",
         tags=["Experiments"],
+        operation_id="getExperiment",
         response_model=ExperimentResponse,
         responses={HTTPStatus.NOT_FOUND: _PROBLEM},
     )
@@ -178,6 +190,7 @@ def create_experiment_router(service: ExperimentService | None) -> APIRouter:
     @router.get(
         "/experiments/{experimentId}/comparison",
         tags=["Experiments"],
+        operation_id="compareExperiment",
         response_model=ComparisonResponse,
         responses={HTTPStatus.NOT_FOUND: _PROBLEM},
     )
@@ -191,6 +204,7 @@ def create_experiment_router(service: ExperimentService | None) -> APIRouter:
     @router.post(
         "/experiments/{experimentId}/cancel",
         tags=["Experiments"],
+        operation_id="cancelExperiment",
         response_model=ExperimentResponse,
         responses={HTTPStatus.NOT_FOUND: _PROBLEM, HTTPStatus.CONFLICT: _PROBLEM},
     )

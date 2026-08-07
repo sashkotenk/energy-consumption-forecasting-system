@@ -103,6 +103,7 @@ def create_app(
     application = FastAPI(
         title="EnergyForecast API",
         version=__version__,
+        openapi_version="3.1.0",
         description="Energy consumption analysis and forecasting API",
         lifespan=lifespan,
     )
@@ -233,10 +234,30 @@ def _install_openapi_contract(application: FastAPI) -> None:
             description=application.description,
             routes=application.routes,
         )
-        readiness_response = schema["paths"]["/health/ready"]["get"]["responses"]["503"]
-        readiness_response["content"] = {
-            PROBLEM_MEDIA_TYPE: {"schema": {"$ref": "#/components/schemas/Problem"}}
-        }
+        problem_schema = {"schema": {"$ref": "#/components/schemas/Problem"}}
+        for path_item in schema["paths"].values():
+            if not isinstance(path_item, dict):
+                continue
+            for operation in path_item.values():
+                if not isinstance(operation, dict):
+                    continue
+                responses = operation.get("responses")
+                if not isinstance(responses, dict):
+                    continue
+                for response in responses.values():
+                    if not isinstance(response, dict):
+                        continue
+                    content = response.get("content")
+                    if not isinstance(content, dict) or PROBLEM_MEDIA_TYPE not in content:
+                        continue
+                    content[PROBLEM_MEDIA_TYPE] = problem_schema
+                    application_json = content.get("application/json")
+                    if (
+                        isinstance(application_json, dict)
+                        and application_json.get("schema", {}).get("$ref")
+                        == "#/components/schemas/Problem"
+                    ):
+                        content.pop("application/json", None)
         application.openapi_schema = schema
         return schema
 

@@ -53,6 +53,8 @@ uploads/
 /artifacts/
 /backend/artifacts/
 models/
+!/frontend/src/generated/api/models/
+!/frontend/src/generated/api/models/**
 exports/
 *.joblib
 *.pkl

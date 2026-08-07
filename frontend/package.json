@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "api:generate": "node ../scripts/generate_api_sdk.mjs",
+    "api:check": "npm run api:generate && git diff --exit-code -- ../docs/api/openapi.json src/generated/api"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
