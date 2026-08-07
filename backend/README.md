@@ -20,7 +20,8 @@ After `uv sync --all-groups`, run the FastAPI process with:
 uv run energy-forecast-api
 ```
 
-The API exposes `/health/live`, `/health/ready`, `/jobs`, `/docs`, and `/openapi.json`. Readiness
+The API exposes `/health/live`, `/health/ready`, `/jobs`, `/datasets`, dataset-import staging and
+lookup, `/docs`, and `/openapi.json`. Readiness
 returns `503 application/problem+json` until `DATABASE_URL` points to an available PostgreSQL
 database. `uv run energy-forecast-worker` starts the independent PostgreSQL polling process.
 
@@ -32,6 +33,13 @@ the repository `.env.example` for the complete current list. `APP_PORT`, `MAX_UP
 `DATABASE_URL` and `CODE_COMMIT` are required; missing values stop startup before serving work.
 Worker polling, heartbeat, stale timeout, recovery batch size, and one-cycle smoke mode are typed
 settings. The heartbeat interval must remain shorter than the stale timeout.
+
+The ignored root `.env` is suitable for local Compose and can be loaded explicitly when starting a
+host API from `backend/`:
+
+```bash
+uv run --env-file ../.env energy-forecast-api
+```
 
 Every log record is one JSON object and includes service, environment, code commit, correlation
 context, duration and error fields. An incoming safe `X-Request-ID` is preserved; otherwise the API
@@ -59,7 +67,18 @@ An optional idempotency key returns the original job when all enqueue fields mat
 Problem Details conflict when the key is reused differently. Retry keeps the same job ID and stores
 each claimed attempt in `app.job_attempts`, preserving prior stale/failure evidence.
 
-The package uses a `src` layout. Dataset and forecasting handlers are introduced by later tasks.
+The package uses a `src` layout. Dataset-import and forecasting handlers are introduced by later
+tasks.
+
+## Dataset catalog and uploads
+
+Dataset CRUD uses short PostgreSQL transactions and reports dependent immutable versions/imports as
+a conflict instead of cascading artifact removal. `POST /datasets/{datasetId}/imports` accepts
+multipart `.csv` and `.txt` files, enforces `MAX_UPLOAD_BYTES` while streaming, sanitizes the
+original filename and import options, and checks UTF-8 CSV-like structure independently of the
+declared media type. Accepted bytes are stored under an opaque generated key with SHA-256 metadata.
+The dataset version, import record and `dataset_import` job are then committed together and the API
+returns only import/job identifiers. Full row parsing remains a worker responsibility.
 
 ## Database and migrations
 
