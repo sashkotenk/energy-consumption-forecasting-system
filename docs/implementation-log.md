@@ -1099,4 +1099,48 @@ The production build reports a Vite chunk-size warning (main JavaScript chunk ab
 507.52 kB gzip). Generated SDK lint directives and React Hook Form's `watch()` also emit non-failing
 warnings. These are recorded as known optimization/tooling observations rather than hidden.
 
-TASK-19 has not been started.
+
+## TASK-19 — Experiment and forecast workflows
+
+**Date:** 2026-08-08
+**Status:** implemented and repository-wide CI verified
+
+**Scope:** React workflows for experiment history and creation, long-running experiment progress,
+cancel/retry terminal states, model comparison with a required Seasonal Naive-24 baseline, MAE by
+forecast horizon, forecast history/creation/details, actual-versus-predicted visualization, 24-hour
+energy totals, and controlled experiment/forecast artifact downloads. TASK-20 is intentionally outside
+this change.
+
+### Contract and architecture impact
+
+The frontend continues to consume only the generated TypeScript SDK from the authoritative runtime
+OpenAPI contract. Seasonal Naive-24 is inserted as the non-removable baseline for new experiments;
+W1 remains unavailable until a weather dataset is connected. Job polling uses capped 1–5 second
+backoff and stops on terminal states or component unmount. Export UI creates artifacts server-side and
+retrieves their bytes through the controlled artifact endpoint by ID; response storage-like URLs are
+not used. ECharts views are keyboard-focusable, disposed during cleanup and paired with textual or
+tabular alternatives. No database schema, migration or backend API contract changed.
+
+### Verification evidence
+
+TASK-19 PR #19 Baseline CI run 84 (`31225674658`) completed successfully on the merge candidate.
+All three jobs — Frontend, Backend and Repository verification — completed with `success`.
+
+| CI job | Command / gate | Actual result |
+|---|---|---|
+| Frontend | `npm ci` | exit 0; 278 packages added, 279 audited, 0 vulnerabilities |
+| Frontend | `npm run api:check` | exit 0; generated SDK/OpenAPI drift check passed |
+| Frontend | `npm run lint` | exit 0; 0 errors, 4 warnings |
+| Frontend | `npm run typecheck` | exit 0 |
+| Frontend | `npm run test -- --run` | exit 0; 4 test files, 10 tests passed, 0 failed |
+| Frontend | `npm run build` | exit 0; 838 modules transformed; production build completed |
+| Repository | `git diff --check` | exit 0 |
+| Repository | `./scripts/verify.ps1` | exit 0; repository-wide verification completed successfully |
+| Backend | locked dependencies, lint, formatting, mypy, runtime OpenAPI, Alembic upgrade/drift and pytest | all completed successfully |
+
+The frontend build still reports the known Vite chunk-size warning (main JavaScript chunk about
+1.58 MB, 513.94 kB gzip). Lint reports four non-failing warnings: three generated SDK unused-disable
+warnings and the existing React Hook Form compiler warning in the import wizard. These do not bypass
+or weaken any required check and are recorded for later optimization.
+
+TASK-20 has not been started.
