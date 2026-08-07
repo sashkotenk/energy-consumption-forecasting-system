@@ -66,7 +66,7 @@ export function ExperimentBuilderPage() {
   return (
     <>
       <PageHeader title="Новий експеримент" description="Оберіть підготовлену версію й моделі. Baseline Seasonal Naive-24 додається автоматично та не може бути вилучений з порівняння." />
-      <form className="panel experiment-form" onSubmit={handleSubmit((values) => create.mutate(values))}>
+      <form className="panel experiment-form" onSubmit={(event) => { void handleSubmit((values) => create.mutate(values))(event) }}>
         <div className="form-grid">
           <label>Назва експерименту<input {...register('name')} aria-invalid={Boolean(errors.name)} />{errors.name && <small className="field-error">{errors.name.message}</small>}</label>
           <label>Версія набору даних<input {...register('datasetVersionId')} placeholder="UUID підготовленої погодинної версії" aria-invalid={Boolean(errors.datasetVersionId)} />{errors.datasetVersionId && <small className="field-error">{errors.datasetVersionId.message}</small>}</label>
