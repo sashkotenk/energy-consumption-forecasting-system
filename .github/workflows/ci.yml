@@ -66,6 +66,9 @@ jobs:
       - name: Type check
         run: uv run --frozen mypy src tests
 
+      - name: Verify runtime OpenAPI artifact
+        run: uv run --frozen python ../scripts/export_openapi.py --check
+
       - name: Upgrade database
         run: uv run --frozen alembic upgrade head
 
@@ -94,6 +97,9 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Verify generated API SDK drift
+        run: npm run api:check
 
       - name: Lint
         run: npm run lint
