@@ -474,11 +474,7 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Forecast"}
-        "202":
-          description: Forecast job accepted
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/AcceptedJob"}
+        "404": {$ref: "#/components/responses/Problem"}
         "409": {$ref: "#/components/responses/Problem"}
         "422": {$ref: "#/components/responses/Problem"}
 
@@ -1161,7 +1157,10 @@ components:
       properties:
         model_run_id: {type: string, format: uuid}
         dataset_version_id: {type: string, format: uuid}
-        origin: {type: string, format: date-time}
+        origin:
+          type: string
+          format: date-time
+          description: Optional aware UTC-hour boundary backed by a completed hourly bucket
 
     ForecastPoint:
       type: object
@@ -1175,12 +1174,21 @@ components:
     Forecast:
       type: object
       required:
-        [id, model_run_id, dataset_version_id, origin, status, points, created_at]
+        [id, model_run_id, dataset_version_id, artifact_id, bundle_sha256, algorithm,
+         feature_schema_version, origin, timezone, status, total_energy_kwh, points,
+         created_at, completed_at]
       properties:
         id: {type: string, format: uuid}
         model_run_id: {type: string, format: uuid}
         dataset_version_id: {type: string, format: uuid}
+        artifact_id: {type: string, format: uuid}
+        bundle_sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        algorithm: {type: string}
+        feature_schema_version: {type: string}
         origin: {type: string, format: date-time}
+        timezone:
+          type: string
+          description: IANA timezone of the requested dataset version
         status: {type: string}
         total_energy_kwh: {type: number, minimum: 0}
         points:
@@ -1189,6 +1197,7 @@ components:
           maxItems: 24
           items: {$ref: "#/components/schemas/ForecastPoint"}
         created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
 
     ForecastPage:
       allOf:

@@ -894,3 +894,50 @@ one final-test evaluation; verified model bundle; and a required result manifest
 
 ADR-022 records the common-origin, pre-final-test selection and partial-failure decisions. Migration
 `c3d9a5f27410` adds result manifests and failure evidence and enforces the completed-manifest rule.
+
+## TASK-15 — Forecast service
+
+**Date:** 2026-08-07
+
+**Status:** implemented and locally verified
+
+**Scope:** synchronous forecast creation from a completed model run; verified bundle compatibility;
+latest or explicit completed-hour origin selection; recorded quality-policy reuse; one feature vector;
+24 ordered nonnegative predictions; daily total; model, artifact, dataset and schema provenance; and
+transactional forecast/point persistence.
+
+### Forecast contract
+
+- The selected model run must be completed and have an internal bundle. The requested immutable
+  dataset version must be ready, hourly and equal to the bundle's training dataset version.
+- Bundle checksum, payload checksum, feature schema, algorithm, implementation and library-major
+  checks finish before deserialization or prediction.
+- An explicit origin must include a timezone, be hour-aligned and correspond to a valid stored hourly
+  bucket. Without one, the service chooses the latest eligible bucket.
+- The feature pipeline applies the quality policy recorded in the bundle. It never fills a missing
+  lag or rolling window; the API returns `forecast_history_missing` with an actionable 422 response.
+- Predictions must have finite `(1, 24)` shape. Values are clipped at zero, timestamped from `h01` to
+  `h24`, summed with the same stored values and inserted with the forecast in one transaction.
+
+### Verification evidence
+
+| Working directory | Command | Actual result |
+|---|---|---|
+| `backend` | `python -m uv run pytest tests/unit/test_forecast_engine.py tests/integration/test_model_bundles.py -q` | exit 0; 10 passed in 2.47 s |
+| `backend` | `$env:TEST_DATABASE_URL=...; python -m uv run pytest tests/integration/test_forecast_api.py -q` | exit 0; 1 API/database E2E passed in 15.88 s |
+| `backend` | `python -m uv run ruff check src tests` | exit 0; all checks passed |
+| `backend` | `python -m uv run mypy src tests` | exit 0; no issues in 118 source files |
+| repository root | `.\scripts\verify.ps1` | exit 0 in 331.3 s; complete Compose, migration, backend and frontend gate passed |
+| `backend` via full gate | `python -m uv run ruff check .` | exit 0; all checks passed |
+| `backend` via full gate | `python -m uv run ruff format --check .` | exit 0; 127 files already formatted |
+| `backend` via full gate | `python -m uv run mypy src tests` | exit 0; no issues in 118 source files |
+| `backend` via full gate | `python -m uv run alembic check` | exit 0; `No new upgrade operations detected.` |
+| `backend` via full gate | `python -m uv run pytest -m "not performance"` | exit 0; 175 collected, 2 performance tests deselected, 173 passed in 282.05 s |
+| `frontend` via full gate | `npm ci` | exit 0; 274 packages installed, 275 audited, 0 vulnerabilities; expected local Node patch `EBADENGINE` warning |
+| `frontend` via full gate | `npm run lint` | exit 0; no ESLint errors |
+| `frontend` via full gate | `npm run typecheck` | exit 0; no TypeScript errors |
+| `frontend` via full gate | `npm run test -- --run` | exit 0; 1 file and 1 test passed, 0 failed |
+| `frontend` via full gate | `npm run build` | exit 0; 29 modules transformed; 193.98 kB JS bundle (61.16 kB gzip) |
+
+ADR-023 records why one bounded prediction is synchronous and why exact bundle/dataset compatibility
+and atomic 24-point persistence are part of the service boundary. No schema migration was required.

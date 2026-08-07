@@ -41,7 +41,10 @@ separate final-test boundary. The experiment service stages immutable configurat
 one transaction. Its worker evaluates every algorithm on the same eligible origins, persists fold
 and horizon metrics, applies the recorded recommendation rule before opening the 2010 final test,
 and requires a result manifest before completion. W1 remains represented but is rejected until a
-real weather dataset is connected. Forecast handlers remain deferred.
+real weather dataset is connected. The synchronous forecast service resolves a completed model run,
+verifies its internal bundle against the requested dataset, algorithm, implementation and feature
+schema, rebuilds one origin with the recorded quality policy, then persists exactly 24 ordered points
+and their total in one transaction. Missing history is reported instead of filled.
 The model foundation defines common trainer/predictor ports, a bounded algorithm registry, metrics,
 Seasonal Naive-24/-168 and an internal bundle lifecycle. Bundle loading checks artifact and payload
 checksums plus compatibility metadata before deserializing joblib bytes.
