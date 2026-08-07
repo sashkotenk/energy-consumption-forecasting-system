@@ -79,6 +79,10 @@ jobs:
         working-directory: frontend
         run: npm install --save-dev --save-exact @hey-api/openapi-ts@0.99.0
 
+      - name: Capture dependency audit details
+        working-directory: frontend
+        run: npm audit --json || true
+
       - name: Generate TypeScript SDK
         working-directory: frontend
         run: npm run api:generate
@@ -114,7 +118,7 @@ jobs:
             docs/api/openapi.json \
             docs/architecture/traceability.csv \
             docs/implementation-log.md \
-            frontend/hey-api.config.ts \
+            frontend/openapi-ts.config.ts \
             frontend/package.json \
             frontend/package-lock.json \
             frontend/src/generated/api \
