@@ -19,6 +19,7 @@ from energy_forecast.database import (
     SqlAlchemyDatasetCatalogRepository,
     SqlAlchemyJobQueue,
     SqlAlchemyQualityRepository,
+    SqlAlchemyTransformationRepository,
     create_database_engine,
     create_session_factory,
 )
@@ -37,6 +38,8 @@ from energy_forecast.logging_config import configure_logging
 from energy_forecast.quality.api import create_quality_router
 from energy_forecast.quality.service import QualityService
 from energy_forecast.request_context import RequestContextMiddleware
+from energy_forecast.transformations.api import create_transformation_router
+from energy_forecast.transformations.service import TransformationService
 
 
 def create_app(
@@ -45,18 +48,24 @@ def create_app(
     job_queue: JobQueue | None = None,
     dataset_service: DatasetService | None = None,
     quality_service: QualityService | None = None,
+    transformation_service: TransformationService | None = None,
 ) -> FastAPI:
     """Build an API application with explicit, replaceable infrastructure ports."""
     resolved_settings = settings or Settings(service=Service.API)
     configure_logging(resolved_settings)
     resolved_check = readiness_check or _default_readiness_check(resolved_settings)
-    engine, resolved_queue, resolved_dataset_service, resolved_quality_service = (
-        _default_application_services(
-            resolved_settings,
-            job_queue,
-            dataset_service,
-            quality_service,
-        )
+    (
+        engine,
+        resolved_queue,
+        resolved_dataset_service,
+        resolved_quality_service,
+        resolved_transformation_service,
+    ) = _default_application_services(
+        resolved_settings,
+        job_queue,
+        dataset_service,
+        quality_service,
+        transformation_service,
     )
 
     @asynccontextmanager
@@ -80,6 +89,7 @@ def create_app(
     application.include_router(create_job_router(resolved_queue))
     application.include_router(create_dataset_router(resolved_dataset_service))
     application.include_router(create_quality_router(resolved_quality_service))
+    application.include_router(create_transformation_router(resolved_transformation_service))
     _install_openapi_contract(application)
     return application
 
@@ -89,17 +99,33 @@ def _default_application_services(
     queue: JobQueue | None,
     dataset_service: DatasetService | None,
     quality_service: QualityService | None,
-) -> tuple[AsyncEngine | None, JobQueue | None, DatasetService | None, QualityService | None]:
+    transformation_service: TransformationService | None,
+) -> tuple[
+    AsyncEngine | None,
+    JobQueue | None,
+    DatasetService | None,
+    QualityService | None,
+    TransformationService | None,
+]:
     if settings.database_url is None:
-        return None, queue, dataset_service, quality_service
+        return None, queue, dataset_service, quality_service, transformation_service
     engine = create_database_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
     resolved_queue = queue or SqlAlchemyJobQueue(session_factory)
     resolved_quality_service = quality_service or QualityService(
         SqlAlchemyQualityRepository(session_factory)
     )
+    resolved_transformation_service = transformation_service or TransformationService(
+        SqlAlchemyTransformationRepository(session_factory)
+    )
     if dataset_service is not None:
-        return engine, resolved_queue, dataset_service, resolved_quality_service
+        return (
+            engine,
+            resolved_queue,
+            dataset_service,
+            resolved_quality_service,
+            resolved_transformation_service,
+        )
     artifacts = ArtifactService(
         LocalArtifactStore(settings.artifact_root),
         SqlAlchemyArtifactMetadataRepository(session_factory),
@@ -109,7 +135,13 @@ def _default_application_services(
         artifacts,
         max_upload_bytes=settings.max_upload_bytes,
     )
-    return engine, resolved_queue, resolved_dataset_service, resolved_quality_service
+    return (
+        engine,
+        resolved_queue,
+        resolved_dataset_service,
+        resolved_quality_service,
+        resolved_transformation_service,
+    )
 
 
 def _default_readiness_check(settings: Settings) -> ReadinessCheck:

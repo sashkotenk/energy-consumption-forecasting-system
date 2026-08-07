@@ -151,7 +151,7 @@ class DatasetImportHandler:
                 )
                 raise
             report["quality_report_version"] = quality_report.report_version
-        await context.report_progress(100)
+        await context.report_progress(99)
         return report
 
 

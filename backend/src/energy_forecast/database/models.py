@@ -432,7 +432,7 @@ class RawMeasurement(Base):
 class HourlyObservation(Base):
     __tablename__ = "hourly_observations"
     __table_args__ = (
-        CheckConstraint("energy_kwh >= 0"),
+        CheckConstraint("energy_kwh IS NULL OR energy_kwh >= 0"),
         CheckConstraint("mean_active_power_kw IS NULL OR mean_active_power_kw >= 0"),
         CheckConstraint("mean_reactive_power_kw IS NULL OR mean_reactive_power_kw >= 0"),
         CheckConstraint("mean_voltage_v IS NULL OR mean_voltage_v > 0"),
@@ -468,7 +468,7 @@ class HourlyObservation(Base):
     )
     hour_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     timezone_context: Mapped[str | None] = mapped_column(String(80))
-    energy_kwh: Mapped[float] = mapped_column(Double, nullable=False)
+    energy_kwh: Mapped[float | None] = mapped_column(Double)
     mean_active_power_kw: Mapped[float | None] = mapped_column(Double)
     mean_reactive_power_kw: Mapped[float | None] = mapped_column(Double)
     mean_voltage_v: Mapped[float | None] = mapped_column(Double)

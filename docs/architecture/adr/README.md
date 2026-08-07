@@ -20,5 +20,6 @@ All decisions are **Accepted for design baseline** and must be reviewed after im
 | ADR-014 | Job idempotency, retry and attempt history | replay returns the original job; attempt evidence is retained |
 | ADR-015 | Import timezone and restart policy | explicit UCI timezone assumption; partial attempts are never valid |
 | ADR-016 | Quality evidence and report versioning | raw invalid values are retained; reports are immutable and paginated |
+| ADR-017 | Immutable hourly transformation versions | partial energy is unscaled; missing hours remain distinguishable from zero |
 
 For every implementation deviation, create a new ADR or supersede the corresponding entry rather than silently changing the code.

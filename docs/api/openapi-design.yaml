@@ -200,7 +200,7 @@ paths:
           description: Transformation accepted
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/AcceptedJob"}
+              schema: {$ref: "#/components/schemas/TransformationAccepted"}
         "409": {$ref: "#/components/responses/Problem"}
         "422": {$ref: "#/components/responses/Problem"}
 
@@ -754,11 +754,20 @@ components:
           minimum: 0.8
           maximum: 1
           default: 0.9
-        include_statuses:
-          type: array
-          items:
-            type: string
-            enum: [complete, imputed_short_gap, valid_partial]
+        duplicate_policy:
+          type: string
+          enum: [reject, keep_first, keep_last, mean]
+          default: reject
+
+    TransformationAccepted:
+      type: object
+      required: [run_id, job_id, source_version_id, target_version_id, status]
+      properties:
+        run_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        source_version_id: {type: string, format: uuid}
+        target_version_id: {type: string, format: uuid}
+        status: {type: string, const: queued}
 
     AnalyticsSummary:
       type: object
