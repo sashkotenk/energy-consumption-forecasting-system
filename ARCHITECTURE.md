@@ -2,8 +2,9 @@
 
 ## Implemented snapshot
 
-The repository implements the ingestion, quality, transformation, analytics and feature-building
-parts of the planned system. Model training and forecasting are not implemented yet.
+The repository implements the backend flow from ingestion and quality processing through analytics,
+ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product flow is
+still pending beyond the starter shell.
 
 ```text
 repository
@@ -44,7 +45,14 @@ and requires a result manifest before completion. W1 remains represented but is 
 real weather dataset is connected. The synchronous forecast service resolves a completed model run,
 verifies its internal bundle against the requested dataset, algorithm, implementation and feature
 schema, rebuilds one origin with the recorded quality policy, then persists exactly 24 ordered points
-and their total in one transaction. Missing history is reported instead of filled.
+and their total in one transaction. Missing history is reported instead of filled. The export
+boundary reuses forecast/experiment application services plus the Artifact Service to materialize
+forecast CSV, chart-ready JSON, metrics CSV/JSON and the persisted experiment manifest. Export bytes
+are checksum-tracked in `app.artifacts`; downloads resolve artifact IDs through metadata, enforce an
+export-purpose allowlist, sanitize attachment filenames and never return storage keys or filesystem
+paths. Missing metadata returns 404 Problem Details, while metadata whose bytes are unavailable returns
+410. CSV serialization has explicit UTF-8 encoding, fixed column order and spreadsheet-formula
+neutralization for textual cells.
 The model foundation defines common trainer/predictor ports, a bounded algorithm registry, metrics,
 Seasonal Naive-24/-168 and an internal bundle lifecycle. Bundle loading checks artifact and payload
 checksums plus compatibility metadata before deserializing joblib bytes.
@@ -116,3 +124,8 @@ These documents describe planned and implemented components. Runtime OpenAPI for
 - Time-series preprocessing must preserve chronological order and prevent future-data leakage.
 - A transformation never edits its source version or raw artifact; the child version records source,
   engine, policy, summary, coverage, interpolation and hourly quality status.
+- Export creation is immediate only because the supported forecast and experiment result sets are
+  bounded. Generated files are persisted through the existing Artifact Service with SHA-256 metadata.
+- Controlled downloads allow only export-purpose artifacts, return safe attachment filenames and do
+  not expose the internal `storage_key` or configured filesystem root.
+- Textual CSV cells that could be interpreted as spreadsheet formulas are prefixed as literal text.
