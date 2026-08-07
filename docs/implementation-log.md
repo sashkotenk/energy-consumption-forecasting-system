@@ -1060,4 +1060,43 @@ The generator reports that its OpenAPI 3.1 support is beta; this is retained as 
 limitation rather than hidden. The risk is bounded by the explicit contract tests, deterministic
 drift checks, generated SDK typecheck and production build.
 
-TASK-18 has not been started.
+## TASK-18 — React product foundation
+
+**Date:** 2026-08-08
+**Status:** implemented and repository-wide CI verified
+
+**Scope:** React application shell and routing, TanStack Query server-state boundary, generated
+TypeScript SDK configuration, reusable Ukrainian loading/empty/error states, dataset catalog and
+details, eight-step import wizard, data-quality workflow, bounded analytics views, accessible ECharts
+lifecycle wrapper, responsive navigation and terminal-aware job polling. Experiment and forecast
+product workflows remain outside this task.
+
+### Contract and architecture impact
+
+The frontend uses the generated OpenAPI SDK as its only HTTP contract layer; no API DTOs are copied
+by hand. React Hook Form and Zod own import-form state and validation, while query state remains in
+TanStack Query. ECharts instances are disposed during component cleanup and analytics requests are
+bounded before rendering. No database schema, Alembic migration or backend API contract changed.
+
+### Verification evidence
+
+TASK-18 PR #18 Baseline CI run 65 completed successfully on the merge candidate. All three jobs —
+Frontend, Backend and Repository verification — completed with `success`.
+
+| CI job | Command / gate | Actual result |
+|---|---|---|
+| Frontend | `npm ci` | exit 0; 278 packages added, 279 audited, 0 vulnerabilities |
+| Frontend | `npm run api:check` | exit 0; deterministic SDK regeneration produced no tracked diff |
+| Frontend | `npm run lint` | exit 0; 0 errors, 4 warnings (3 generated-file unused-disable warnings and one React Hook Form compiler warning) |
+| Frontend | `npm run typecheck` | exit 0; TypeScript build-mode check passed |
+| Frontend | `npm run test -- --run` | exit 0; 2 files, 3 tests passed, 0 failed |
+| Frontend | `npm run build` | exit 0; 831 modules transformed; production build completed |
+| Repository | `git diff --check` | exit 0 |
+| Repository | `./scripts/verify.ps1` | exit 0; repository-wide verification completed successfully |
+| Backend | locked dependency, lint, format, mypy, OpenAPI, Alembic and pytest gates | all completed successfully |
+
+The production build reports a Vite chunk-size warning (main JavaScript chunk about 1.55 MB,
+507.52 kB gzip). Generated SDK lint directives and React Hook Form's `watch()` also emit non-failing
+warnings. These are recorded as known optimization/tooling observations rather than hidden.
+
+TASK-19 has not been started.
