@@ -49,7 +49,7 @@ export function ForecastBuilderPage() {
   return (
     <>
       <PageHeader title="Новий прогноз" description="Сформуйте рівно 24 погодинні значення на основі завершеного model run. Якщо origin не задано, backend обере останню допустиму завершену годину." />
-      <form className="panel experiment-form" onSubmit={handleSubmit((values) => create.mutate(values))}>
+      <form className="panel experiment-form" onSubmit={(event) => { void handleSubmit((values) => create.mutate(values))(event) }}>
         <div className="form-grid"><label>Версія даних<input {...register('datasetVersionId')} aria-invalid={Boolean(errors.datasetVersionId)} />{errors.datasetVersionId && <small className="field-error">{errors.datasetVersionId.message}</small>}</label><label>Model run<input {...register('modelRunId')} aria-invalid={Boolean(errors.modelRunId)} />{errors.modelRunId && <small className="field-error">{errors.modelRunId.message}</small>}</label><label>Origin (необов’язково)<input type="datetime-local" {...register('origin')} /></label></div>
         {create.error && <ErrorState error={create.error} />}
         <button className="button primary" type="submit" disabled={create.isPending}>{create.isPending ? 'Формуємо…' : 'Створити 24-годинний прогноз'}</button>
