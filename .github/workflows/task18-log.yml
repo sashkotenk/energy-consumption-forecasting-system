@@ -29,49 +29,7 @@ jobs:
               exit 1
             fi
             sed -i '$d' docs/implementation-log.md
-            cat >> docs/implementation-log.md <<'EOF'
-
-## TASK-18 — React product foundation
-
-**Date:** 2026-08-08
-**Status:** implemented and repository-wide CI verified
-
-**Scope:** React application shell and routing, TanStack Query server-state boundary, generated
-TypeScript SDK configuration, reusable Ukrainian loading/empty/error states, dataset catalog and
-details, eight-step import wizard, data-quality workflow, bounded analytics views, accessible ECharts
-lifecycle wrapper, responsive navigation and terminal-aware job polling. Experiment and forecast
-product workflows remain outside this task.
-
-### Contract and architecture impact
-
-The frontend uses the generated OpenAPI SDK as its only HTTP contract layer; no API DTOs are copied
-by hand. React Hook Form and Zod own import-form state and validation, while query state remains in
-TanStack Query. ECharts instances are disposed during component cleanup and analytics requests are
-bounded before rendering. No database schema, Alembic migration or backend API contract changed.
-
-### Verification evidence
-
-TASK-18 PR #18 Baseline CI run 65 completed successfully on the merge candidate. All three jobs —
-Frontend, Backend and Repository verification — completed with `success`.
-
-| CI job | Command / gate | Actual result |
-|---|---|---|
-| Frontend | `npm ci` | exit 0; 278 packages added, 279 audited, 0 vulnerabilities |
-| Frontend | `npm run api:check` | exit 0; deterministic SDK regeneration produced no tracked diff |
-| Frontend | `npm run lint` | exit 0; 0 errors, 4 warnings (3 generated-file unused-disable warnings and one React Hook Form compiler warning) |
-| Frontend | `npm run typecheck` | exit 0; TypeScript build-mode check passed |
-| Frontend | `npm run test -- --run` | exit 0; 2 files, 3 tests passed, 0 failed |
-| Frontend | `npm run build` | exit 0; 831 modules transformed; production build completed |
-| Repository | `git diff --check` | exit 0 |
-| Repository | `./scripts/verify.ps1` | exit 0; repository-wide verification completed successfully |
-| Backend | locked dependency, lint, format, mypy, OpenAPI, Alembic and pytest gates | all completed successfully |
-
-The production build reports a Vite chunk-size warning (main JavaScript chunk about 1.55 MB,
-507.52 kB gzip). Generated SDK lint directives and React Hook Form's `watch()` also emit non-failing
-warnings. These are recorded as known optimization/tooling observations rather than hidden.
-
-TASK-19 has not been started.
-EOF
+            printf '%s' 'IyMgVEFTSy0xOCDigJQgUmVhY3QgcHJvZHVjdCBmb3VuZGF0aW9uCgoqKkRhdGU6KiogMjAyNi0wOC0wOAoqKlN0YXR1czoqKiBpbXBsZW1lbnRlZCBhbmQgcmVwb3NpdG9yeS13aWRlIENJIHZlcmlmaWVkCgoqKlNjb3BlOioqIFJlYWN0IGFwcGxpY2F0aW9uIHNoZWxsIGFuZCByb3V0aW5nLCBUYW5TdGFjayBRdWVyeSBzZXJ2ZXItc3RhdGUgYm91bmRhcnksIGdlbmVyYXRlZApUeXBlU2NyaXB0IFNESyBjb25maWd1cmF0aW9uLCByZXVzYWJsZSBVa3JhaW5pYW4gbG9hZGluZy9lbXB0eS9lcnJvciBzdGF0ZXMsIGRhdGFzZXQgY2F0YWxvZyBhbmQKZGV0YWlscywgZWlnaHQtc3RlcCBpbXBvcnQgd2l6YXJkLCBkYXRhLXF1YWxpdHkgd29ya2Zsb3csIGJvdW5kZWQgYW5hbHl0aWNzIHZpZXdzLCBhY2Nlc3NpYmxlIEVDaGFydHMKbGlmZWN5Y2xlIHdyYXBwZXIsIHJlc3BvbnNpdmUgbmF2aWdhdGlvbiBhbmQgdGVybWluYWwtYXdhcmUgam9iIHBvbGxpbmcuIEV4cGVyaW1lbnQgYW5kIGZvcmVjYXN0CnByb2R1Y3Qgd29ya2Zsb3dzIHJlbWFpbiBvdXRzaWRlIHRoaXMgdGFzay4KCiMjIyBDb250cmFjdCBhbmQgYXJjaGl0ZWN0dXJlIGltcGFjdAoKVGhlIGZyb250ZW5kIHVzZXMgdGhlIGdlbmVyYXRlZCBPcGVuQVBJIFNESyBhcyBpdHMgb25seSBIVFRQIGNvbnRyYWN0IGxheWVyOyBubyBBUEkgRFRPcyBhcmUgY29waWVkCmJ5IGhhbmQuIFJlYWN0IEhvb2sgRm9ybSBhbmQgWm9kIG93biBpbXBvcnQtZm9ybSBzdGF0ZSBhbmQgdmFsaWRhdGlvbiwgd2hpbGUgcXVlcnkgc3RhdGUgcmVtYWlucyBpbgpUYW5TdGFjayBRdWVyeS4gRUNoYXJ0cyBpbnN0YW5jZXMgYXJlIGRpc3Bvc2VkIGR1cmluZyBjb21wb25lbnQgY2xlYW51cCBhbmQgYW5hbHl0aWNzIHJlcXVlc3RzIGFyZQpib3VuZGVkIGJlZm9yZSByZW5kZXJpbmcuIE5vIGRhdGFiYXNlIHNjaGVtYSwgQWxlbWJpYyBtaWdyYXRpb24gb3IgYmFja2VuZCBBUEkgY29udHJhY3QgY2hhbmdlZC4KCiMjIyBWZXJpZmljYXRpb24gZXZpZGVuY2UKClRBU0stMTggUFIgIzE4IEJhc2VsaW5lIENJIHJ1biA2NSBjb21wbGV0ZWQgc3VjY2Vzc2Z1bGx5IG9uIHRoZSBtZXJnZSBjYW5kaWRhdGUuIEFsbCB0aHJlZSBqb2JzIOKAlApGcm9udGVuZCwgQmFja2VuZCBhbmQgUmVwb3NpdG9yeSB2ZXJpZmljYXRpb24g4oCUIGNvbXBsZXRlZCB3aXRoIGBzdWNjZXNzYC4KCnwgQ0kgam9iIHwgQ29tbWFuZCAvIGdhdGUgfCBBY3R1YWwgcmVzdWx0IHwKfC0tLXwtLS18LS0tfAp8IEZyb250ZW5kIHwgYG5wbSBjaWAgfCBleGl0IDA7IDI3OCBwYWNrYWdlcyBhZGRlZCwgMjc5IGF1ZGl0ZWQsIDAgdnVsbmVyYWJpbGl0aWVzIHwKfCBGcm9udGVuZCB8IGBucG0gcnVuIGFwaTpjaGVja2AgfCBleGl0IDA7IGRldGVybWluaXN0aWMgU0RLIHJlZ2VuZXJhdGlvbiBwcm9kdWNlZCBubyB0cmFja2VkIGRpZmYgfAp8IEZyb250ZW5kIHwgYG5wbSBydW4gbGludGAgfCBleGl0IDA7IDAgZXJyb3JzLCA0IHdhcm5pbmdzICgzIGdlbmVyYXRlZC1maWxlIHVudXNlZC1kaXNhYmxlIHdhcm5pbmdzIGFuZCBvbmUgUmVhY3QgSG9vayBGb3JtIGNvbXBpbGVyIHdhcm5pbmcpIHwKfCBGcm9udGVuZCB8IGBucG0gcnVuIHR5cGVjaGVja2AgfCBleGl0IDA7IFR5cGVTY3JpcHQgYnVpbGQtbW9kZSBjaGVjayBwYXNzZWQgfAp8IEZyb250ZW5kIHwgYG5wbSBydW4gdGVzdCAtLSAtLXJ1bmAgfCBleGl0IDA7IDIgZmlsZXMsIDMgdGVzdHMgcGFzc2VkLCAwIGZhaWxlZCB8CnwgRnJvbnRlbmQgfCBgbnBtIHJ1biBidWlsZGAgfCBleGl0IDA7IDgzMSBtb2R1bGVzIHRyYW5zZm9ybWVkOyBwcm9kdWN0aW9uIGJ1aWxkIGNvbXBsZXRlZCB8CnwgUmVwb3NpdG9yeSB8IGBnaXQgZGlmZiAtLWNoZWNrYCB8IGV4aXQgMCB8CnwgUmVwb3NpdG9yeSB8IGAuL3NjcmlwdHMvdmVyaWZ5LnBzMWAgfCBleGl0IDA7IHJlcG9zaXRvcnktd2lkZSB2ZXJpZmljYXRpb24gY29tcGxldGVkIHN1Y2Nlc3NmdWxseSB8CnwgQmFja2VuZCB8IGxvY2tlZCBkZXBlbmRlbmN5LCBsaW50LCBmb3JtYXQsIG15cHksIE9wZW5BUEksIEFsZW1iaWMgYW5kIHB5dGVzdCBnYXRlcyB8IGFsbCBjb21wbGV0ZWQgc3VjY2Vzc2Z1bGx5IHwKClRoZSBwcm9kdWN0aW9uIGJ1aWxkIHJlcG9ydHMgYSBWaXRlIGNodW5rLXNpemUgd2FybmluZyAobWFpbiBKYXZhU2NyaXB0IGNodW5rIGFib3V0IDEuNTUgTUIsCjUwNy41MiBrQiBnemlwKS4gR2VuZXJhdGVkIFNESyBsaW50IGRpcmVjdGl2ZXMgYW5kIFJlYWN0IEhvb2sgRm9ybSdzIGB3YXRjaCgpYCBhbHNvIGVtaXQgbm9uLWZhaWxpbmcKd2FybmluZ3MuIFRoZXNlIGFyZSByZWNvcmRlZCBhcyBrbm93biBvcHRpbWl6YXRpb24vdG9vbGluZyBvYnNlcnZhdGlvbnMgcmF0aGVyIHRoYW4gaGlkZGVuLgoKVEFTSy0xOSBoYXMgbm90IGJlZW4gc3RhcnRlZC4K' | base64 --decode >> docs/implementation-log.md
             git rm .github/workflows/task18-log.yml
           fi
 
