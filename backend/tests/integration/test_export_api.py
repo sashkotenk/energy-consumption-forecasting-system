@@ -292,8 +292,7 @@ def test_all_task16_exports_persist_checksum_and_download(
 
     rows = asyncio.run(_read_artifacts(temporary_database_url))
     persisted = {
-        str(row_id): (checksum, size_bytes, kind)
-        for row_id, checksum, size_bytes, kind in rows
+        str(row_id): (checksum, size_bytes, kind) for row_id, checksum, size_bytes, kind in rows
     }
     assert len(created) == 5
     for artifact_id, content, purpose in created:
