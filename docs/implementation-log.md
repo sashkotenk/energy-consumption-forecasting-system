@@ -1144,3 +1144,49 @@ warnings and the existing React Hook Form compiler warning in the import wizard.
 or weaken any required check and are recorded for later optimization.
 
 TASK-20 has not been started.
+
+## TASK-20 — Comprehensive automated test suite
+
+**Date:** 2026-08-08
+**Status:** implemented and repository-wide CI verified
+
+**Scope:** deterministic regression fixtures; backend unit, integration, API/database and ML leakage coverage; React component coverage; Chromium browser E2E for the primary product journey; critical-domain coverage reporting; and a manual external-UCI parser profile. Production API behavior, database schema and migrations remain unchanged.
+
+### Test strategy and regression coverage
+
+- Synthetic fixtures cover invalid timestamps, conflicting duplicates, the five/six-minute interpolation boundary, zero demand, exact daily seasonality, a repeated DST-like local clock hour and spreadsheet-formula prefixes in CSV text.
+- Real PostgreSQL/TimescaleDB integration tests continue to exercise migrations, repositories, import, quality, transformations, analytics, experiment persistence, model bundles, forecasting and exports.
+- All 15 time-series leakage/reproducibility guards remain mandatory in pull-request CI before the complete backend suite.
+- React Testing Library covers import mapping and duplicate policy, quality counters and transformation submission, generated-contract model comparison, and keyboard-accessible chart cleanup.
+- Playwright runs one deterministic Chromium journey: import -> quality/transform -> analysis -> experiment -> comparison -> forecast -> controlled CSV export.
+- The complete UCI source is not committed or downloaded in pull-request CI. `scripts/run_uci_profile.ps1` can stream an external source selected by `ENERGYFORECAST_UCI_PATH` under the `full_dataset` marker.
+
+### Verification evidence
+
+Pull request #20 Baseline CI run 96 (`31242033958`) completed successfully on commit `42fc7c8c31cbf8dd7183d853c96dc2f7be58b6c1`. All four jobs — Backend, Frontend, Browser E2E and Repository verification — completed with `success`.
+
+| CI job | Command / gate | Actual result |
+|---|---|---|
+| Backend | `uv run --frozen ruff check .` | exit 0; all checks passed |
+| Backend | `uv run --frozen ruff format --check .` | exit 0; 136 files already formatted |
+| Backend | `uv run --frozen mypy src tests` | exit 0; no issues in 132 source files |
+| Backend | runtime OpenAPI drift | exit 0; contract synchronized |
+| Backend | `uv run --frozen alembic upgrade head` + `alembic check` | exit 0; all migrations applied; no new upgrade operations detected |
+| Backend | `pytest -m ml_guard` | exit 0; 15 passed, 184 deselected |
+| Backend | coverage-backed suite | exit 0; 196 passed, 3 deselected in 102.04 s |
+| Backend | critical-domain coverage report | 87% total branch-aware coverage over 2,978 statements |
+| Frontend | `npm ci` | exit 0; 281 packages added, 282 audited, 0 vulnerabilities |
+| Frontend | generated SDK/OpenAPI drift | exit 0 |
+| Frontend | `npm run lint` | exit 0; no errors; four pre-existing non-failing warnings |
+| Frontend | `npm run typecheck` | exit 0 |
+| Frontend | `npm run test -- --run` | exit 0; 5 files, 14 tests passed |
+| Frontend | `npm run build` | exit 0; production build completed |
+| Browser E2E | `npm run e2e` | exit 0; 1 Chromium scenario passed in 6.3 s |
+| Repository | `git diff --check` | exit 0 |
+| Repository | `./scripts/verify.ps1` | exit 0; repository-wide database/backend/frontend verification passed |
+
+The integrated gate re-exercised the implementation accumulated through TASK-01 — TASK-19 and found no blocking regression. Intermediate TASK-20 CI failures were limited to test/configuration defects (TypeScript project inclusion, Vitest test discovery/DOM cleanup and mechanical Ruff formatting); exact failing logs were inspected and root causes corrected without weakening production assertions, ML guards, tolerances or database/API contracts.
+
+### Known limitations
+
+The full UCI profile requires a separately supplied local source and is intentionally excluded from normal pull-request CI to avoid committing or repeatedly downloading the 126+ MB dataset. The production frontend build retains the known Vite chunk-size warning (main JavaScript bundle about 1.58 MB, about 514 kB gzip), and ESLint retains the existing generated-SDK/React Hook Form warnings; neither is a test bypass or TASK-20 functional regression.
