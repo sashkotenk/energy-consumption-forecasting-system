@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -63,6 +63,7 @@ function completedExperiment(): ExperimentResponse {
 }
 
 afterEach(() => {
+  cleanup()
   vi.restoreAllMocks()
   chartInstance.setOption.mockClear()
   chartInstance.resize.mockClear()
@@ -80,7 +81,7 @@ describe('TASK-20 component coverage', () => {
     fireEvent.change(screen.getByLabelText('Профіль імпорту'), { target: { value: 'generic_csv' } })
     fireEvent.click(screen.getByRole('button', { name: 'Далі' }))
     const file = new File(['timestamp,energy_kwh\n2026-01-01T00:00:00Z,0.5\n'], 'fixture.csv', { type: 'text/csv' })
-    fireEvent.change(screen.getByLabelText('CSV або TXT'), { target: { files: [file] } })
+    fireEvent.change(screen.getByLabelText(/CSV або TXT/), { target: { files: [file] } })
     fireEvent.click(screen.getByRole('button', { name: 'Далі' }))
     fireEvent.click(screen.getByRole('button', { name: 'Далі' }))
 
@@ -122,8 +123,9 @@ describe('TASK-20 component coverage', () => {
     )
 
     expect(await screen.findByRole('heading', { name: 'Якість даних' })).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
+    const metrics = screen.getByRole('region', { name: 'Показники якості' })
+    expect(within(metrics).getByText('3')).toBeInTheDocument()
+    expect(within(metrics).getByText('2')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Створити погодинну версію' }))
 
     await waitFor(() => expect(transform).toHaveBeenCalledWith({
@@ -178,8 +180,8 @@ describe('TASK-20 component coverage', () => {
     )
 
     expect(await screen.findByRole('heading', { name: 'Порівняння моделей' })).toBeInTheDocument()
-    expect(screen.getByText(AlgorithmType.SeasonalNaive24)).toBeInTheDocument()
-    expect(screen.getByText(AlgorithmType.Ridge)).toBeInTheDocument()
+    expect(screen.getAllByText(AlgorithmType.SeasonalNaive24).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(AlgorithmType.Ridge).length).toBeGreaterThan(0)
     expect(screen.getByText('рекомендована')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Створити прогноз рекомендованою моделлю' })).toHaveAttribute(
       'href',
