@@ -93,6 +93,7 @@ jobs:
       - name: Generate current Point-5 protocol handoff
         run: >-
           uv run --frozen python ../scripts/generate_point5_handoff.py
+          --release-candidate-sha ${{ github.event.pull_request.head.sha || github.sha }}
           --benchmark-json ../release-evidence/release-benchmark.json
           --output ../release-evidence/point5-handoff.json
       - name: Verify current Point-5 protocol handoff
