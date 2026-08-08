@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -34,6 +35,14 @@ EXPECTED_FINAL_TEST_START = "2010-01-01T00:00:00+00:00"
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise SystemExit(message)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main() -> None:
@@ -85,11 +94,13 @@ def main() -> None:
     lockfiles = dependencies.get("lockfiles")
     _require(isinstance(lockfiles, dict) and len(lockfiles) == 2, "Lockfile SHA-256 baseline is incomplete")
     for relative, digest in lockfiles.items():
-        _require((ROOT / relative).is_file(), f"Missing lockfile referenced by handoff: {relative}")
+        lock_path = ROOT / relative
+        _require(lock_path.is_file(), f"Missing lockfile referenced by handoff: {relative}")
         _require(
             isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest) is not None,
             f"Invalid lockfile SHA-256 for {relative}",
         )
+        _require(_sha256(lock_path) == digest, f"Lockfile SHA-256 drifted for {relative}")
 
     schemas = payload.get("feature_schemas")
     _require(isinstance(schemas, dict), "Feature schemas are missing")
