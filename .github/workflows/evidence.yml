@@ -1,0 +1,79 @@
+name: Release Evidence
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evidence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documentation:
+    name: Documentation and evidence structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python scripts/verify_documentation.py
+      - name: Verify evidence manifest when present
+        run: |
+          if [[ -f docs/evidence/handoff-manifest.json ]]; then
+            python scripts/verify_evidence.py
+          fi
+
+  benchmark:
+    name: Deterministic release benchmark
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - name: Run deterministic benchmark
+        run: uv run --frozen python ../scripts/generate_release_benchmark.py --output ../release-evidence/release-benchmark.json
+      - name: Run performance regression marker
+        run: uv run --frozen pytest -m performance
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-benchmark-${{ github.sha }}
+          path: release-evidence/release-benchmark.json
+          if-no-files-found: error
+          retention-days: 14
+
+  browser-evidence:
+    name: Browser evidence
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence-${{ github.sha }}
+          path: frontend/test-results
+          if-no-files-found: error
+          retention-days: 14

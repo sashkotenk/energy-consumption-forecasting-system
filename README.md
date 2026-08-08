@@ -29,6 +29,10 @@ React/Vite frontend provides Ukrainian workflows for dataset import and analysis
 and terminal-state handling, baseline model comparison, 24-hour forecast review and controlled
 exports.
 
+The operational release uses the W0 feature mode (consumption history plus calendar features). W1 is
+rejected until an actual weather source is connected; the repository does not claim final UCI or
+weather-benefit experiment results before the later research stage.
+
 ## Toolchain
 
 | Area | Pinned baseline |
@@ -41,7 +45,8 @@ exports.
 | Nginx runtime | 1.30.4 / Alpine 3.24 |
 
 Resolved application/development dependency versions and executed verification evidence are recorded
-in [`docs/implementation-log.md`](docs/implementation-log.md).
+in [`docs/implementation-log.md`](docs/implementation-log.md). The public release evidence pack is
+under [`docs/evidence/`](docs/evidence/README.md).
 
 ## Repository layout
 
@@ -74,8 +79,9 @@ worker startup. Stop and remove the stack with:
 docker compose down
 ```
 
-See [`docs/deployment.md`](docs/deployment.md) for the production-like overlay, security controls,
-health model, resource guidance and backup boundary.
+See [`docs/user-guide.md`](docs/user-guide.md) for the supported workflow and
+[`docs/deployment.md`](docs/deployment.md) for the production-like overlay, security controls, health
+model, resource guidance and backup boundary.
 
 ## Backend development
 
@@ -122,13 +128,18 @@ On PowerShell, run from the repository root:
 
 The script validates development/production Compose models and hardening, starts the pinned database
 using health-state waiting, applies and drift-checks migrations, runs the mandatory ML guards and the
-remaining backend/frontend verification, then checks whitespace and accidental private tracked paths.
+remaining backend/frontend verification, verifies documentation/evidence integrity, then checks
+whitespace and accidental private tracked paths.
 
-Linux/CI can additionally validate a fresh full stack with:
+Linux/CI additionally validates a fresh full stack with:
 
 ```text
 bash scripts/compose-smoke.sh
 ```
+
+Release-readiness performance evidence is generated with deterministic synthetic fixtures through
+`scripts/generate_release_benchmark.py`; the full UCI source remains an external optional profile and
+is never added to Git.
 
 ## Direct database/API development
 
@@ -156,14 +167,17 @@ python -m uv run energy-forecast-worker
 ## Architecture and contracts
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — implemented architecture snapshot;
+- [`docs/user-guide.md`](docs/user-guide.md) — supported user workflow and operational limits;
 - [`docs/deployment.md`](docs/deployment.md) — container topology and deployment hardening;
+- [`docs/testing.md`](docs/testing.md) — verification strategy and reproducible commands;
 - [`docs/api/openapi.json`](docs/api/openapi.json) — authoritative exported runtime OpenAPI 3.1 contract;
-- [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design reference retained for planned-contract traceability;
+- [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design reference retained for contract traceability;
 - [`frontend/src/generated/api/`](frontend/src/generated/api/) — generated TypeScript SDK; never edit generated files manually;
 - [`docs/database/schema-design.sql`](docs/database/schema-design.sql) — design-time PostgreSQL/TimescaleDB schema;
 - [`docs/diagrams/`](docs/diagrams/) — C4, UML, sequence, ER, deployment, and ML diagrams;
-- [`docs/sad/SAD_draft_v0.1.md`](docs/sad/SAD_draft_v0.1.md) — draft Software Architecture Document;
-- [`docs/architecture/traceability.csv`](docs/architecture/traceability.csv) — requirement traceability baseline.
+- [`docs/sad/SAD_v1.0.md`](docs/sad/SAD_v1.0.md) — final Software Architecture Document;
+- [`docs/architecture/traceability.csv`](docs/architecture/traceability.csv) — requirement-to-code/data/API/test/evidence mapping;
+- [`docs/evidence/README.md`](docs/evidence/README.md) — release evidence and point-5 handoff pack.
 
 ## License
 

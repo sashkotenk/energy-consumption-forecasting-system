@@ -1259,3 +1259,98 @@ The CI workflow uses repository read-only permissions and does not require plain
 ### Known non-blocking observations
 
 `npm ci` reports an `allow-scripts` review warning for the locked `esbuild@0.28.1` postinstall but reports zero vulnerabilities. ESLint retains three generated-SDK unused-disable warnings and the React Hook Form compiler memoization warning in the import wizard. OpenAPI Generator reports its OpenAPI 3.1 support as beta plus existing server/example/inline-schema generation warnings. The frontend production build retains the known chunk-size warning (main JavaScript about 1.58 MB, 513.94 kB gzip). None of these warnings caused a failed gate or was hidden by a bypass.
+
+## TASK-22 — Release readiness, final architecture and evidence
+
+**Date:** 2026-08-08
+**Status:** implemented with successful pull-request verification and measured release evidence
+
+**Scope:** final repository audit and documentation synchronization; final English SAD; user guide;
+requirement-to-code/data/API/test/evidence traceability; security review; deterministic synthetic
+performance benchmark; browser screenshot evidence; evidence SHA-256 handoff manifest; documentation
+link/Mermaid checks; and integration of documentation/evidence verification into the repository-wide
+gate. Product runtime behavior, OpenAPI contracts, generated SDK and database schema remain unchanged.
+
+### Audit and release-readiness result
+
+The TASK-22 audit found no runtime regression in the integrated TASK-01 — TASK-21 baseline that
+required changing product behavior. Public documentation did contain a real release-readiness defect:
+the earlier SAD draft and overview files still mixed planned wording with the implemented system.
+They were synchronized to the actual modular-monolith/API-worker/PostgreSQL/TimescaleDB/artifact
+architecture, the obsolete draft was removed, and `SAD_v1.0.md` now documents only implemented
+components and explicit known limitations.
+
+The final traceability matrix maps FR-01 — FR-10 and NFR-01 — NFR-08 to implementation, persistence/API
+surfaces, automated tests and release evidence. The evidence pack contains a security review,
+measured deterministic benchmark JSON, browser screenshot, verification summary and checksum manifest.
+The full UCI dataset, user uploads, model binaries, secrets and private coursework material are not
+included.
+
+### Pull-request and evidence verification
+
+Pull request #22 Verification CI run 109 (`31245909529`) completed successfully for the measured
+evidence source commit. Release Evidence run 2 (`31245909530`) also completed successfully and
+produced the benchmark/browser artifacts later committed into `docs/evidence/`.
+
+| Gate | Actual result |
+|---|---|
+| Backend locked dependency synchronization | success; Python 3.13.14 / uv 0.12.2 |
+| Ruff lint / format | success |
+| mypy | success |
+| Backend unit tests | 154 passed, 1 deselected |
+| PostgreSQL/TimescaleDB integration tests | 42 passed, 1 deselected |
+| API-focused tests within integration suite | 22 passed |
+| Mandatory `ml_guard` suite | 15 passed, 184 deselected |
+| Coverage-backed backend suite | 196 passed, 3 deselected |
+| Critical package coverage | 87% branch-aware coverage; 2,978 statements, 284 missing, 580 branches, 149 partial |
+| Alembic upgrade / drift | success through `c3d9a5f27410`; no new upgrade operations detected |
+| Runtime OpenAPI / design assertions / generated SDK drift | success |
+| Frontend component tests | 5 files, 14 tests passed |
+| Frontend lint / typecheck / production build | success |
+| Playwright Chromium E2E | 1 primary scenario passed in 7.2 s |
+| Docker build / clean-volume six-service Compose smoke | success |
+| Infrastructure hardening verification | success |
+| Dependency audit / secret and private-file scan / Trivy image scans | success |
+| Repository-wide `scripts/verify.ps1` | success on the measured evidence source run |
+| Release documentation link/Mermaid verification | success |
+| Release performance marker | 1 passed; 1 TimescaleDB-only performance case skipped because that evidence job had no `TEST_DATABASE_URL`; DB performance behavior remains covered by the dedicated integration gate |
+
+No TASK-22 API contract change or TypeScript SDK regeneration was required. No database schema change
+or Alembic migration was added.
+
+### Measured deterministic performance evidence
+
+Release Evidence ran on an AMD EPYC 9V74 hosted runner with 4 logical CPUs, 16,766,423,040 bytes of
+memory, Linux x86_64 and Python 3.13.14. Seed 42 and the one-thread ML benchmark profile were recorded.
+The committed `release-benchmark.json` contains the measured values:
+
+- 50,000-row UCI-shaped streaming parse: median 772.274191 ms, p95 772.623827 ms,
+  64,743.84 rows/s;
+- quality evaluation of 10,000 minute rows: median 49.002625 ms, p95 174.332200 ms;
+- 24 hours of minute-to-hour transformation: median 6.857282 ms, p95 6.924340 ms;
+- bounded analytics bucket selection: median 0.001562 ms, p95 0.001673 ms over 1,000 repetitions;
+- FastAPI liveness through the ASGI stack: median 1.355032 ms, p95 1.523044 ms over 100 repetitions;
+- Ridge direct-24 training: median 0.016361 s over three measured fits after warmup;
+- Ridge direct-24 prediction: median 2.961151 ms, p95 3.357788 ms over 30 predictions;
+- serialized direct-24 Ridge artifact: 2,183 bytes.
+
+These are engineering measurements on deterministic synthetic fixtures, not final scientific results
+on the complete UCI dataset. The external full-UCI profile was not run because the source remains
+intentionally outside Git. W1 weather mode also remains unsupported until a real weather source is
+connected, so no weather-benefit result is claimed.
+
+### Defects corrected during TASK-22
+
+The first repository-wide verification attempt identified trailing whitespace in the new final SAD;
+the exact failing output was inspected and the whitespace was corrected. A later evidence commit
+repeated the same mechanical defect in `docs/evidence/verification.md`; it was corrected and the
+manifest checksum refreshed. No assertion, tolerance, leakage guard, timeout or security control was
+weakened.
+
+### Known non-blocking observations
+
+The production frontend build retains the Vite chunk-size warning (about 1,582.44 kB JavaScript,
+513.94 kB gzip). npm reports the existing `esbuild@0.28.1` `allowScripts` review warning while the
+locked install/audit reports zero vulnerabilities. GitHub's artifact action emits hosted-runner
+Node/deprecation warnings unrelated to product runtime. The coursework baseline has no built-in
+authentication/TLS gateway for direct untrusted-Internet exposure.

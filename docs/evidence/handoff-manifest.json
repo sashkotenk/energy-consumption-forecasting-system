@@ -1,0 +1,22 @@
+{
+  "evidence_run_id": 31245909530,
+  "files": [
+    {
+      "path": "docs/evidence/release-benchmark.json",
+      "sha256": "8aa5fe3cbeca2ed64ad9daa3faf3a0f70047e0175e7f3163e59f5479fa167708"
+    },
+    {
+      "path": "docs/evidence/screenshots/primary-flow.png",
+      "sha256": "0010fd07438aa82dd2e23fed9063daf2ed3f749c6f80294c9fcbf239454f423c"
+    },
+    {
+      "path": "docs/evidence/verification.md",
+      "sha256": "dd300b10f71f6411a0dd7457a81c8267583ef0380e39d4160cc2ba138038399a"
+    }
+  ],
+  "pull_request": 22,
+  "release_candidate_sha": "6700825ed19ed715c4b43ddb613afcd15852cf1c",
+  "schema": "energyforecast-handoff-manifest/v1",
+  "tested_merge_sha": "582679a3d5f03c512509b9298e9ea60428e900dd",
+  "verification_run_id": 31245909529
+}
