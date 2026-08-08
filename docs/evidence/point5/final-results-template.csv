@@ -1,0 +1,1 @@
+experiment_id,algorithm,weather_mode,quality_profile,feature_schema_version,split_definition,mean_cv_mae,std_cv_mae,final_mae,final_rmse,final_smape,train_time_seconds,prediction_median_ms,prediction_p95_ms,artifact_size_bytes,recommended,notes

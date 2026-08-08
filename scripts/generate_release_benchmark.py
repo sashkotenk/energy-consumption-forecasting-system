@@ -142,8 +142,8 @@ def _ml_fixture() -> tuple[np.ndarray, np.ndarray]:
 def _model_benchmarks(features: np.ndarray, targets: np.ndarray) -> dict[str, Any]:
     configurations = (
         ("ridge_direct_24", AlgorithmType.RIDGE, 3, 30),
-        ("random_forest_direct_24", AlgorithmType.RANDOM_FOREST, 1, 10),
-        ("hist_gradient_boosting_direct_24", AlgorithmType.HIST_GRADIENT_BOOSTING, 1, 10),
+        ("random_forest_direct_24", AlgorithmType.RANDOM_FOREST, 3, 30),
+        ("hist_gradient_boosting_direct_24", AlgorithmType.HIST_GRADIENT_BOOSTING, 3, 30),
     )
     results: dict[str, Any] = {}
     for key, algorithm, training_repetitions, prediction_repetitions in configurations:

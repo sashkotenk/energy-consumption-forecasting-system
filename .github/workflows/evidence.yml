@@ -34,14 +34,19 @@ jobs:
           assert rows[0] == ['timestamp', 'energy_kwh']
           assert len(rows) == 60 * 24 + 1
           PY
-      - name: Verify evidence manifest when present
+      - name: Verify historical evidence manifest when present
         run: |
           if [[ -f docs/evidence/handoff-manifest.json ]]; then
             python scripts/verify_evidence.py
           fi
+      - name: Verify committed Point-5 handoff when present
+        run: |
+          if [[ -f docs/evidence/point5-handoff.json ]]; then
+            python scripts/verify_point5_handoff.py
+          fi
 
   benchmark:
-    name: Deterministic release benchmark
+    name: Deterministic release and database benchmark
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
@@ -75,14 +80,46 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --all-groups --frozen
-      - name: Run deterministic benchmark
-        run: uv run --frozen python ../scripts/generate_release_benchmark.py --output ../release-evidence/release-benchmark.json
+      - name: Apply database schema
+        run: uv run --frozen alembic upgrade head
+      - name: Run deterministic CPU and ML benchmark
+        run: >-
+          uv run --frozen python ../scripts/generate_release_benchmark.py
+          --output ../release-evidence/release-benchmark.json
+      - name: Run database batch-insert and analytics endpoint benchmark
+        run: >-
+          uv run --frozen python ../scripts/generate_system_benchmark.py
+          --output ../release-evidence/system-benchmark.json
+      - name: Generate current Point-5 protocol handoff
+        run: >-
+          uv run --frozen python ../scripts/generate_point5_handoff.py
+          --release-candidate-sha ${{ github.event.pull_request.head.sha || github.sha }}
+          --benchmark-json ../release-evidence/release-benchmark.json
+          --output ../release-evidence/point5-handoff.json
+      - name: Verify current Point-5 protocol handoff
+        run: >-
+          uv run --frozen python ../scripts/verify_point5_handoff.py
+          --path ../release-evidence/point5-handoff.json
       - name: Run performance regression marker
         run: uv run --frozen pytest -m performance
       - uses: actions/upload-artifact@v7
         with:
           name: release-benchmark-${{ github.sha }}
-          path: release-evidence/release-benchmark.json
+          path: release-evidence/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  compose-startup:
+    name: Cold and warm Compose startup benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Measure prebuilt-image cold and warm startup
+        run: bash scripts/benchmark_compose_startup.sh release-evidence/compose-startup.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: compose-startup-${{ github.sha }}
+          path: release-evidence/compose-startup.json
           if-no-files-found: error
           retention-days: 14
 
@@ -99,14 +136,24 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
       - run: npm ci
-      - name: Build production frontend and record Vite bundle sizes
+      - name: Build production frontend
         run: npm run build
+      - name: Record production bundle sizes
+        run: >-
+          python ../scripts/measure_frontend_bundle.py
+          --dist dist
+          --output ../release-evidence/frontend-bundle.json
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       - uses: actions/upload-artifact@v7
         with:
           name: browser-evidence-${{ github.sha }}
-          path: frontend/test-results
+          path: |
+            frontend/test-results
+            release-evidence/frontend-bundle.json
           if-no-files-found: error
           retention-days: 14
