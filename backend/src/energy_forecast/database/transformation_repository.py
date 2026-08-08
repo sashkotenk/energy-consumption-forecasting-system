@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -24,6 +25,8 @@ from energy_forecast.transformations.models import (
     StagedTransformation,
     TransformationPolicy,
 )
+
+_INTERVAL_INFERENCE_SAMPLE_SIZE = 4_097
 
 
 class SqlAlchemyTransformationRepository:
@@ -112,8 +115,18 @@ class SqlAlchemyTransformationRepository:
                 raise ValueError("Transformation payload references inconsistent resources")
             source = await session.get(DatasetVersion, run.source_version_id)
             target = await session.get(DatasetVersion, run.target_version_id)
-            if source is None or target is None or source.interval_seconds is None:
+            if source is None or target is None:
                 raise ValueError("Transformation source metadata is incomplete")
+            interval_seconds = source.interval_seconds
+            if interval_seconds is None:
+                interval_seconds = await _infer_source_interval_seconds(
+                    session, source_version_id=source.id
+                )
+            if interval_seconds is None:
+                raise ValueError(
+                    "Transformation source interval is unknown; provide interval_seconds during "
+                    "import or use a regular timestamp cadence that can be inferred"
+                )
             await session.execute(
                 delete(HourlyObservation).where(
                     HourlyObservation.dataset_version_id == run.target_version_id
@@ -125,7 +138,7 @@ class SqlAlchemyTransformationRepository:
             target.status = "transforming"
             target.row_count = None
             target.valid_row_count = None
-            return source.id, target.id, source.interval_seconds, source.timezone_context
+            return source.id, target.id, interval_seconds, source.timezone_context
 
     async def load_source(self, source_version_id: UUID) -> tuple[SourceMeasurement, ...]:
         async with transactional_session(self._session_factory) as session:
@@ -205,6 +218,39 @@ class SqlAlchemyTransformationRepository:
                 run.completed_at = datetime.now(UTC)
             if target is not None:
                 target.status = "failed"
+
+
+async def _infer_source_interval_seconds(session: object, *, source_version_id: UUID) -> int | None:
+    timestamps = (
+        await session.scalars(
+            select(RawMeasurement.observed_at)
+            .where(RawMeasurement.dataset_version_id == source_version_id)
+            .distinct()
+            .order_by(RawMeasurement.observed_at)
+            .limit(_INTERVAL_INFERENCE_SAMPLE_SIZE)
+        )
+    ).all()
+    if len(timestamps) < 2:
+        return None
+
+    deltas: list[int] = []
+    for previous, current in zip(timestamps, timestamps[1:], strict=False):
+        seconds = (current - previous).total_seconds()
+        if seconds <= 0 or not seconds.is_integer():
+            return None
+        deltas.append(int(seconds))
+
+    candidates = Counter(
+        delta for delta in deltas if delta <= 3600 and 3600 % delta == 0
+    )
+    if not candidates:
+        return None
+    interval_seconds, occurrences = candidates.most_common(1)[0]
+    if occurrences * 2 < len(deltas):
+        return None
+    if any(delta % interval_seconds != 0 for delta in deltas):
+        return None
+    return interval_seconds
 
 
 def _hourly_values(dataset_version_id: UUID, row: HourlyValue) -> dict[str, object]:
