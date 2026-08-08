@@ -21,6 +21,19 @@ jobs:
         with:
           python-version: "3.13"
       - run: python scripts/verify_documentation.py
+      - name: Verify deterministic demo dataset generator
+        run: |
+          python scripts/generate_demo_dataset.py --output /tmp/demo-energy.csv --days 60
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          path = Path('/tmp/demo-energy.csv')
+          with path.open(encoding='utf-8', newline='') as handle:
+              rows = list(csv.reader(handle))
+          assert rows[0] == ['timestamp', 'energy_kwh']
+          assert len(rows) == 60 * 24 + 1
+          PY
       - name: Verify evidence manifest when present
         run: |
           if [[ -f docs/evidence/handoff-manifest.json ]]; then
@@ -30,6 +43,24 @@ jobs:
   benchmark:
     name: Deterministic release benchmark
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+      TEST_DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+    services:
+      db:
+        image: timescale/timescaledb:2.28.3-pg17
+        env:
+          POSTGRES_DB: energyforecast
+          POSTGRES_USER: energyforecast
+          POSTGRES_PASSWORD: energyforecast
+          TIMESCALEDB_TELEMETRY: "off"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U energyforecast -d energyforecast"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     defaults:
       run:
         working-directory: backend
@@ -48,7 +79,7 @@ jobs:
         run: uv run --frozen python ../scripts/generate_release_benchmark.py --output ../release-evidence/release-benchmark.json
       - name: Run performance regression marker
         run: uv run --frozen pytest -m performance
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-benchmark-${{ github.sha }}
           path: release-evidence/release-benchmark.json
@@ -56,7 +87,7 @@ jobs:
           retention-days: 14
 
   browser-evidence:
-    name: Browser evidence
+    name: Browser and frontend evidence
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,9 +100,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Build production frontend and record Vite bundle sizes
+        run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: browser-evidence-${{ github.sha }}
           path: frontend/test-results
