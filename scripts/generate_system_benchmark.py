@@ -186,14 +186,13 @@ async def _seed_analytics_fixture(factory: AsyncSessionFactory) -> UUID:
                     max_missing_run, quality_status, quality_flags
                 )
                 SELECT :version_id,
-                       :start + value * INTERVAL '1 hour',
+                       TIMESTAMPTZ '2020-01-01 00:00:00+00' + value * INTERVAL '1 hour',
                        'UTC', 1.0 + (value % 24), 60, 60, 1.0, 0, 0, 'complete', '{}'::text[]
                 FROM generate_series(0, :last_hour) AS value
                 """
             ),
             {
                 "version_id": version_id,
-                "start": START,
                 "last_hour": ANALYTICS_HOURS - 1,
             },
         )
