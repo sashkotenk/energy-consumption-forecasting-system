@@ -74,3 +74,5 @@ On PowerShell set the environment variable with `$env:ENERGYFORECAST_UCI_PATH` b
 ## Coverage policy
 
 Coverage is diagnostic evidence, not a reason to relax assertions, tolerances, leakage guards or error handling. The CI report focuses on critical domain and application packages. A missing line should lead to a meaningful test only when the behavior is relevant; no production branch is excluded or weakened solely to increase a percentage.
+
+Exact TASK-20 execution counts, coverage and CI run evidence are recorded in `docs/implementation-log.md`.
