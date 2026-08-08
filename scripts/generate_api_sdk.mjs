@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -41,6 +41,14 @@ const result = spawnSync('docker', dockerArgs, {
 if (result.error) {
   console.error(`Failed to start Docker: ${result.error.message}`);
   process.exit(1);
+}
+
+if (result.status === 0) {
+  for (const relativePath of ['index.ts', 'apis/index.ts', 'models/index.ts']) {
+    const path = resolve(outputDirectory, relativePath);
+    const source = readFileSync(path, 'utf8');
+    writeFileSync(path, source.replace('/* eslint-disable */\n', ''), 'utf8');
+  }
 }
 
 process.exit(result.status ?? 1);
