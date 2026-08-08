@@ -97,6 +97,14 @@ finally {
 
 Push-Location $repositoryRoot
 try {
+    python scripts/verify_documentation.py
+    Assert-LastExitCode -CommandName "documentation verification"
+
+    if (Test-Path "docs/evidence/handoff-manifest.json") {
+        python scripts/verify_evidence.py
+        Assert-LastExitCode -CommandName "evidence checksum verification"
+    }
+
     git diff --check
     Assert-LastExitCode -CommandName "git diff --check"
 
