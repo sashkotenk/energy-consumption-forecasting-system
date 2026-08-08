@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, insert, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from energy_forecast.database.models import (
     Dataset,
@@ -220,7 +221,9 @@ class SqlAlchemyTransformationRepository:
                 target.status = "failed"
 
 
-async def _infer_source_interval_seconds(session: object, *, source_version_id: UUID) -> int | None:
+async def _infer_source_interval_seconds(
+    session: AsyncSession, *, source_version_id: UUID
+) -> int | None:
     timestamps = (
         await session.scalars(
             select(RawMeasurement.observed_at)
