@@ -1143,7 +1143,6 @@ The frontend build still reports the known Vite chunk-size warning (main JavaScr
 warnings and the existing React Hook Form compiler warning in the import wizard. These do not bypass
 or weaken any required check and are recorded for later optimization.
 
-TASK-20 has not been started.
 
 ## TASK-20 — Comprehensive automated test suite
 
