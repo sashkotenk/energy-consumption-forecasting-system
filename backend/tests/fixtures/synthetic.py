@@ -71,7 +71,7 @@ def csv_formula_prefixes() -> tuple[str, ...]:
         "=SUM(A1:A2)",
         "+cmd|' /C calc'!A0",
         "-danger",
-        "@HYPERLINK(\"https://example.invalid\")",
+        '@HYPERLINK("https://example.invalid")',
         "\t=hidden",
     )
 
