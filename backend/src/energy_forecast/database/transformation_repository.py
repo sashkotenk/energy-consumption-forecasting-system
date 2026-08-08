@@ -244,9 +244,7 @@ async def _infer_source_interval_seconds(
             return None
         deltas.append(int(seconds))
 
-    candidates = Counter(
-        delta for delta in deltas if delta <= 3600 and 3600 % delta == 0
-    )
+    candidates = Counter(delta for delta in deltas if delta <= 3600 and 3600 % delta == 0)
     if not candidates:
         return None
     interval_seconds, occurrences = candidates.most_common(1)[0]
