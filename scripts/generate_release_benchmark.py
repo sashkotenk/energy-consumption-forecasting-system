@@ -14,6 +14,7 @@ import os
 import platform
 import statistics
 import time
+import tracemalloc
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -52,6 +53,16 @@ def _measure(call: Callable[[], Any], repetitions: int) -> dict[str, float | int
         "median_ms": round(statistics.median(samples), 6),
         "p95_ms": round(ordered[p95_index], 6),
     }
+
+
+def _peak_incremental_memory_bytes(call: Callable[[], Any]) -> int:
+    tracemalloc.start()
+    try:
+        call()
+        _, peak_bytes = tracemalloc.get_traced_memory()
+        return int(peak_bytes)
+    finally:
+        tracemalloc.stop()
 
 
 def _cpu_model() -> str:
@@ -128,6 +139,37 @@ def _ml_fixture() -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(features, dtype=np.float64), np.asarray(targets, dtype=np.float64)
 
 
+def _model_benchmarks(features: np.ndarray, targets: np.ndarray) -> dict[str, Any]:
+    configurations = (
+        ("ridge_direct_24", AlgorithmType.RIDGE, 3, 30),
+        ("random_forest_direct_24", AlgorithmType.RANDOM_FOREST, 1, 10),
+        ("hist_gradient_boosting_direct_24", AlgorithmType.HIST_GRADIENT_BOOSTING, 1, 10),
+    )
+    results: dict[str, Any] = {}
+    for key, algorithm, training_repetitions, prediction_repetitions in configurations:
+        result = benchmark_model(
+            lambda algorithm=algorithm: create_model(algorithm),
+            features,
+            targets,
+            features[:1],
+            training_repetitions=training_repetitions,
+            prediction_repetitions=prediction_repetitions,
+        )
+        results[key] = {
+            "algorithm": algorithm.value,
+            "training_repetitions": result.training_repetitions,
+            "train_seconds_median": round(result.train_seconds_median, 6),
+            "prediction_repetitions": result.prediction_repetitions,
+            "prediction_ms_median": round(result.prediction_ms_median, 6),
+            "prediction_ms_p95": round(result.prediction_ms_p95, 6),
+            "artifact_size_bytes": result.artifact_size_bytes,
+            "training_rows": int(features.shape[0]),
+            "feature_count": int(features.shape[1]),
+            "horizon": int(targets.shape[1]),
+        }
+    return results
+
+
 def _build_evidence() -> dict[str, Any]:
     parser_bytes = _parser_source()
     parser = UciDatasetParser()
@@ -139,11 +181,24 @@ def _build_evidence() -> dict[str, Any]:
         )
 
     quality_rows = _quality_rows()
+    one_day_quality_rows = _quality_rows(24 * 60)
     quality = DataQualityEngine()
 
     transformation_rows = _transformation_rows()
     transformation = TransformationEngine()
     policy = TransformationPolicy()
+
+    def transform() -> Any:
+        return transformation.transform(
+            transformation_rows,
+            interval_seconds=60,
+            timezone_context="UTC",
+            policy=policy,
+        )
+
+    def quality_and_transform() -> None:
+        quality.evaluate(one_day_quality_rows)
+        transform()
 
     analytics_range = AnalyticsRange(START, START + timedelta(days=365))
 
@@ -157,23 +212,34 @@ def _build_evidence() -> dict[str, Any]:
         return response.status_code
 
     features, targets = _ml_fixture()
-    model_result = benchmark_model(
-        lambda: create_model(AlgorithmType.RIDGE),
-        features,
-        targets,
-        features[:1],
-        training_repetitions=3,
-        prediction_repetitions=30,
-    )
+    model_results = _model_benchmarks(features, targets)
 
     parser_timing = _measure(parse, 3)
     parser_timing["rows"] = 50_000
     parser_timing["median_rows_per_second"] = round(
         50_000 / (float(parser_timing["median_ms"]) / 1000.0), 2
     )
+    parser_timing["peak_incremental_memory_bytes"] = _peak_incremental_memory_bytes(parse)
+
+    measurements: dict[str, Any] = {
+        "parser_50k_rows": parser_timing,
+        "quality_10k_rows": _measure(lambda: quality.evaluate(quality_rows), 3),
+        "transformation_24h_minutes": _measure(transform, 5),
+        "quality_plus_transformation_24h_minutes": _measure(quality_and_transform, 3),
+        "analytics_bucket_selection": _measure(
+            lambda: _bounded_bucket_seconds(
+                analytics_range,
+                3600 if SeriesResolution.HOUR else 3600,
+                500,
+            ),
+            1_000,
+        ),
+        "api_liveness": _measure(live_request, 100),
+    }
+    measurements.update(model_results)
 
     return {
-        "schema": "energyforecast-release-benchmark/v1",
+        "schema": "energyforecast-release-benchmark/v2",
         "generated_at": datetime.now(UTC).isoformat(),
         "release_commit": os.environ.get("GITHUB_SHA") or os.environ.get("CODE_COMMIT") or "unknown",
         "profile": {
@@ -190,39 +256,7 @@ def _build_evidence() -> dict[str, Any]:
             "uci_in_repository": False,
             "note": "The full UCI profile is a separate external-source check.",
         },
-        "measurements": {
-            "parser_50k_rows": parser_timing,
-            "quality_10k_rows": _measure(lambda: quality.evaluate(quality_rows), 3),
-            "transformation_24h_minutes": _measure(
-                lambda: transformation.transform(
-                    transformation_rows,
-                    interval_seconds=60,
-                    timezone_context="UTC",
-                    policy=policy,
-                ),
-                5,
-            ),
-            "analytics_bucket_selection": _measure(
-                lambda: _bounded_bucket_seconds(
-                    analytics_range,
-                    3600 if SeriesResolution.HOUR else 3600,
-                    500,
-                ),
-                1_000,
-            ),
-            "api_liveness": _measure(live_request, 100),
-            "ridge_direct_24": {
-                "training_repetitions": model_result.training_repetitions,
-                "train_seconds_median": round(model_result.train_seconds_median, 6),
-                "prediction_repetitions": model_result.prediction_repetitions,
-                "prediction_ms_median": round(model_result.prediction_ms_median, 6),
-                "prediction_ms_p95": round(model_result.prediction_ms_p95, 6),
-                "artifact_size_bytes": model_result.artifact_size_bytes,
-                "training_rows": int(features.shape[0]),
-                "feature_count": int(features.shape[1]),
-                "horizon": int(targets.shape[1]),
-            },
-        },
+        "measurements": measurements,
     }
 
 
