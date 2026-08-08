@@ -91,7 +91,7 @@ If Python is not installed locally but Docker is available, run the same generat
 docker run --rm -v "${PWD}:/work" -w /work python:3.13-alpine python scripts/generate_demo_dataset.py --output build/demo-energy.csv
 ```
 
-The generated file has deterministic `timestamp,energy_kwh` columns and contains no private or UCI data. In the import wizard select **generic CSV** and use:
+The generated file has deterministic `timestamp,energy_kwh` columns and contains no private or UCI data. In the import wizard select **generic CSV**. The UI switches the profile defaults to energy/kWh/UTC; keep the following mapping:
 
 - delimiter: `,`;
 - timestamp column: `timestamp`;
@@ -107,20 +107,26 @@ The default 120-day profile is long enough to exercise the lagged forecasting wo
 
 Open **Datasets** and choose **New import**. Two import profiles are supported:
 
-- **UCI household power** for the UCI Individual Household Electric Power Consumption text format;
-- **generic CSV** for a compatible timestamp plus `energy_kwh` or `active_power_kw` source.
+- **UCI household power** for the UCI Individual Household Electric Power Consumption text format. The wizard fixes the source semantic to `Global_active_power` in kW and defaults the timezone to `Europe/Paris`;
+- **generic CSV** for a compatible timestamp plus `energy_kwh` or `active_power_kw` source. Selecting this profile starts from energy/kWh/UTC defaults, which can then be changed to match the source.
 
-For a generic CSV, select the timestamp column, target quantity, delimiter/decimal semantics and timezone context. The uploaded filename is metadata only; storage keys are generated internally. The UI polls the import job until a terminal state and then links to the immutable imported dataset version.
+For a generic CSV, select the timestamp column, target quantity, delimiter/decimal semantics and timezone context. The uploaded filename is metadata only; storage keys are generated internally. The UI polls the import job until a terminal state.
+
+After a successful import the UI deliberately sends the user to **Data quality** rather than encouraging analysis of the immutable raw version. The raw source remains available for provenance, while analysis and experiments are intended to use the prepared hourly version.
 
 The full UCI file is not stored in this repository. It must be supplied by the user when an external full-dataset profile is required.
 
-## 4. Review data quality
+## 4. Review data quality and prepare an hourly version
 
 Open **Data quality** for the imported version. The report distinguishes missing measurements from zero demand and reports parse errors, duplicates, time gaps, physically invalid values and statistical anomalies.
 
+The **Missing (all channels)** card is an aggregate over all electrical fields checked by the quality engine. For a generic CSV that intentionally contains only `timestamp` plus the target column, optional UCI-style electrical channels can therefore be reported as entirely missing. This does **not** mean the target series is missing. Use the per-column issue table and severity to distinguish absent optional channels from gaps in the target data.
+
 Creating an hourly version requires an explicit transformation policy. Short interpolation is bounded to gaps of at most five minutes. Longer gaps are not silently filled or scaled to a full hour. Conflicting duplicates require an explicit duplicate policy.
 
-Every transformation creates a new immutable dataset version; it does not overwrite the raw source or an earlier version.
+Click **Prepare hourly version**. The page now polls the transformation job, shows terminal-aware progress, the job ID and target-version ID, and stops polling when the job reaches a terminal state. Failed, cancelled or stale transformations remain visible and can be retried without manually copying identifiers.
+
+On success the UI automatically opens **Analysis** for the newly created immutable hourly version. When the quality report contains a full-range issue (for example, an optional channel absent for every generic-CSV row), that known source range is also carried into the analysis URL so demo data outside the historical UCI dates opens on a useful period immediately. Every transformation creates a new immutable dataset version; it never overwrites the raw source or an earlier version.
 
 ## 5. Analyse hourly consumption
 
@@ -132,11 +138,13 @@ Open **Analysis** for a ready hourly version. The server returns bounded aggrega
 - heatmap values;
 - distribution bins.
 
-Charts are paired with textual or tabular information. Requests are bounded on the server before rendering.
+Charts are paired with textual or tabular information. Requests are bounded on the server before rendering. The date controls remain editable, so a different period can be selected at any time.
+
+When the prepared series looks correct, choose **New experiment** from the Analysis page. The hourly dataset-version ID is carried into the experiment builder automatically; there is no need to copy the UUID manually.
 
 ## 6. Run and compare experiments
 
-Open **Experiments** and create an experiment from a ready hourly version. The supported required algorithms are:
+Open **Experiments** and create an experiment from a ready hourly version, or continue directly from **Analysis → New experiment**. The supported required algorithms are:
 
 - Seasonal Naive-24;
 - Seasonal Naive-168 diagnostic baseline;
@@ -177,6 +185,7 @@ W1 weather features and final scientific claims on the complete UCI dataset rema
 - **Docker cannot start containers:** verify Docker Desktop/Engine is running with `docker version` and `docker compose version`.
 - **Job stays queued/running:** confirm the worker container is healthy and inspect `docker compose logs worker`.
 - **Readiness fails:** inspect database health and `docker compose logs migrate api db`.
+- **Hourly preparation fails:** read the terminal-state error on the Data quality page and use **Retry transformation** after correcting the underlying data/worker issue.
 - **Forecast history missing:** choose an origin with enough valid historical observations or prepare another hourly version under an appropriate quality policy.
 - **Import rejected:** check timestamp parsing, target-column mapping, units and file structure.
 - **Controlled download returns 410:** artifact metadata exists but the backing bytes are unavailable; regenerate the export.
