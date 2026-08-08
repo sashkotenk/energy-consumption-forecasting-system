@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import UTC, datetime
+from itertools import pairwise
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, insert, select
@@ -237,7 +238,7 @@ async def _infer_source_interval_seconds(
         return None
 
     deltas: list[int] = []
-    for previous, current in zip(timestamps, timestamps[1:], strict=False):
+    for previous, current in pairwise(timestamps):
         seconds = (current - previous).total_seconds()
         if seconds <= 0 or not seconds.is_integer():
             return None
