@@ -57,7 +57,7 @@ infrastructure/          edge proxy deployment assets
 tests/                   reserved for repository-level system tests
 docs/                    versioned product technical documentation
 .github/workflows/       continuous integration
-scripts/                 repository and deployment verification helpers
+scripts/                 repository, demo-data and deployment verification helpers
 ```
 
 Private prompts, coursework planning files, raw datasets, uploaded files, generated models, local
@@ -65,23 +65,56 @@ artifacts, and secrets do not belong in this repository.
 
 ## Run the complete product
 
-Install Docker with the Compose plugin and run from the repository root:
+The supported clean local path needs Git and Docker with Docker Compose v2. A host Python/Node install
+is not required for the normal application stack.
 
-```text
-docker compose up --build
+For a fresh clone:
+
+```bash
+git clone https://github.com/sashkotenk/energy-consumption-forecasting-system.git
+cd energy-consumption-forecasting-system
+git switch main
+git pull --ff-only origin main
+docker compose up -d --build --wait
 ```
+
+If the local Compose version does not support `--wait`, use `docker compose up -d --build` and inspect
+`docker compose ps` until the stack is healthy.
 
 The development override publishes the application at `http://127.0.0.1:8080` and PostgreSQL at
 `127.0.0.1:5432`. Compose waits for database health and the one-shot Alembic migration before API and
-worker startup. Stop and remove the stack with:
+worker startup. Check readiness at `http://127.0.0.1:8080/health/ready`.
 
-```text
+To update an existing clean clone:
+
+```bash
+git switch main
+git fetch origin
+git pull --ff-only origin main
+docker compose up -d --build --wait
+```
+
+Stop the stack with:
+
+```bash
 docker compose down
 ```
 
-See [`docs/user-guide.md`](docs/user-guide.md) for the supported workflow and
-[`docs/deployment.md`](docs/deployment.md) for the production-like overlay, security controls, health
-model, resource guidance and backup boundary.
+Use `docker compose down -v` only when you intentionally want to delete local database/artifact volumes.
+
+For a deterministic demonstration without downloading the UCI source, generate a synthetic 120-day
+hourly CSV:
+
+```bash
+python scripts/generate_demo_dataset.py --output build/demo-energy.csv
+```
+
+The demo file uses `timestamp,energy_kwh` columns and is imported through the generic CSV profile with
+UTC timezone and kWh units. See [`docs/user-guide.md`](docs/user-guide.md) for a Docker-only generator
+alternative and the exact UI mapping.
+
+See [`docs/deployment.md`](docs/deployment.md) for the production-like overlay, security controls,
+health model, resource guidance and backup boundary.
 
 ## Backend development
 
@@ -105,6 +138,9 @@ Use the Node version in `.nvmrc`, then run the following commands from `frontend
 npm ci
 npm run dev
 ```
+
+Direct Vite development serves the frontend on `http://localhost:5173`; the normal Compose product
+entry point remains `http://127.0.0.1:8080`.
 
 Frontend verification:
 
@@ -172,7 +208,7 @@ python -m uv run energy-forecast-worker
 - [`docs/testing.md`](docs/testing.md) — verification strategy and reproducible commands;
 - [`docs/api/openapi.json`](docs/api/openapi.json) — authoritative exported runtime OpenAPI 3.1 contract;
 - [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design reference retained for contract traceability;
-- [`frontend/src/generated/api/`](frontend/src/generated/api/) — generated TypeScript SDK; never edit generated files manually;
+- [`frontend/src/generated/api/`](frontend/src/generated/api/) — generated TypeScript SDK; generated files are normalized only by the repository generator;
 - [`docs/database/schema-design.sql`](docs/database/schema-design.sql) — design-time PostgreSQL/TimescaleDB schema;
 - [`docs/diagrams/`](docs/diagrams/) — C4, UML, sequence, ER, deployment, and ML diagrams;
 - [`docs/sad/SAD_v1.0.md`](docs/sad/SAD_v1.0.md) — final Software Architecture Document;

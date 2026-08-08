@@ -22,10 +22,11 @@ The main verification workflow keeps concerns independent so the failing owner i
 - Gitleaks history/private-file scan, Python/npm dependency audit and container vulnerability scan;
 - repository-wide `scripts/verify.ps1`, workflow YAML parsing and `git diff --check`.
 
-TASK-22 adds a separate pull-request **Release Evidence** workflow. It verifies documentation
-links/Mermaid sources, runs a deterministic release benchmark plus the `performance` marker, captures
-a screenshot from the successful Playwright primary flow and uploads benchmark/browser evidence for
-review. Committed evidence is checksum-verified by `scripts/verify_evidence.py`.
+The separate pull-request **Release Evidence** workflow verifies documentation links/Mermaid sources
+and the deterministic demo-data generator, runs the deterministic release benchmark, executes both
+`performance` tests against a real pinned TimescaleDB service, records the production frontend bundle,
+captures the successful Playwright primary flow and uploads benchmark/browser evidence for review.
+Committed TASK-22 handoff evidence remains checksum-verified by `scripts/verify_evidence.py`.
 
 The workflows use repository read-only permissions and do not require application secrets for pull
 requests. Production-like Compose configuration fails fast when deployment credentials and immutable
@@ -45,6 +46,11 @@ the forecasting protocol:
 - spreadsheet formula prefixes in CSV text.
 
 No fixture depends on a developer-machine path, execution order or wall-clock time.
+
+`scripts/generate_demo_dataset.py` separately produces a deterministic hourly `timestamp,energy_kwh`
+CSV for clean product demonstrations without committing or downloading the UCI dataset. The default
+120-day profile is long enough for the lagged forecasting workflow and is explicitly engineering/demo
+data rather than scientific evidence.
 
 ## Mandatory ML guards
 
@@ -67,8 +73,8 @@ and failure ownership explicit.
 
 Integration jobs use the same pinned TimescaleDB/PostgreSQL major baseline as Docker Compose. The
 migration gate executes `alembic upgrade head` and `alembic check`; repository verification repeats
-those checks against the development database. The release migration head is `c3d9a5f27410`. TASK-22
-changes no schema, so no migration is added merely to create activity.
+those checks against the development database. The release migration head is `c3d9a5f27410`. The
+release-polish audit changes no schema and therefore adds no migration merely to create activity.
 
 ## Browser E2E and screenshot evidence
 
@@ -88,15 +94,15 @@ import -> quality/transform -> analysis -> experiment -> comparison -> forecast 
 
 Playwright uses explicit UI assertions and application terminal states rather than arbitrary sleeps.
 In CI, successful runs also capture a browser screenshot into `test-results`; the Release Evidence
-workflow uploads that directory so representative UI evidence can be copied into the public evidence
-pack from a verified run.
+workflow uploads that directory so representative UI evidence can be reviewed from a verified run.
 
 ## Container and Compose smoke
 
 `python scripts/verify_infrastructure.py` checks the static deployment contract: the exact six
 services, pinned images, migration/health dependencies, network isolation, production absence of bind
-mounts/database ports, read-only roots, 300 MiB upload alignment, controlled artifact boundary and
-private-file exclusion.
+mounts/database ports, read-only roots, 300 MiB upload alignment, controlled artifact boundary,
+private-file exclusion and consistency of `.env.example` with the actual Compose/runtime setting
+names and local defaults.
 
 `bash scripts/compose-smoke.sh` creates a unique Compose project with clean volumes, builds the images,
 uses Compose health-state waiting, checks the SPA and `/api/v1/health/ready`, verifies the migration
@@ -121,7 +127,7 @@ review is stored in `docs/evidence/security-review.md`.
 
 ## Performance evidence
 
-The ordinary `performance` marker keeps parser incremental memory bounded. TASK-22 also provides:
+The Release Evidence benchmark is executed through the locked backend environment:
 
 ```text
 cd backend
@@ -129,11 +135,23 @@ uv run --frozen python ../scripts/generate_release_benchmark.py --output ../buil
 uv run --frozen pytest -m performance
 ```
 
-The deterministic benchmark records runner CPU/memory/Python profile and measured parser, quality,
-transformation, bounded-analytics, FastAPI liveness and direct-24 Ridge train/predict timings. Model
-training uses a warmup followed by three measured fits; prediction records median and p95 across 30
-repetitions. The synthetic benchmark is engineering evidence, not a substitute for the final UCI
+The deterministic benchmark records the runner CPU/memory/Python profile, streaming parser throughput
+and peak incremental memory, quality timing, minute-to-hour transformation timing, combined daily
+quality-plus-transformation timing, bounded-analytics selection, FastAPI liveness, and direct-24
+training/prediction/artifact-size measurements for Ridge, Random Forest and Histogram Gradient
+Boosting. Model benchmarks use fixed seed/data and one-thread model parallelism; prediction records
+median and p95. The synthetic benchmark is engineering evidence, not a substitute for the final UCI
 scientific experiment.
+
+The `performance` marker contains the parser memory regression and a real PostgreSQL/TimescaleDB
+maximum-range analytics regression. Release Evidence now provisions the pinned database and supplies
+`TEST_DATABASE_URL`, so neither case is intentionally skipped there. The ordinary CI still keeps these
+slower checks out of unit/integration jobs by marker selection while the release evidence workflow
+executes them explicitly.
+
+The production frontend build is also executed in Release Evidence. ECharts imports only the required
+chart/component modules and Vite splits framework, charts, rendering and form dependencies into
+bounded production chunks instead of retaining the previous single >500 kB minified JavaScript chunk.
 
 The nightly schedule additionally runs the deterministic performance marker and a focused classical-ML
 fixture suite.
@@ -173,5 +191,6 @@ error handling. The CI report focuses on critical domain and application package
 should lead to a meaningful test only when the behavior is relevant; no production branch is excluded
 or weakened solely to increase a percentage.
 
-Exact execution counts, coverage, benchmark measurements and CI run evidence are recorded in
-`docs/implementation-log.md` and `docs/evidence/verification.md`.
+Exact historical TASK-22 execution counts, coverage and committed handoff measurements remain in
+`docs/implementation-log.md` and `docs/evidence/verification.md`; subsequent release-polish runs are
+visible in GitHub Actions and do not rewrite checksum-locked historical evidence.
