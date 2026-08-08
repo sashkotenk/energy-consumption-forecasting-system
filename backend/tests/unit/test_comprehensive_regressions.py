@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from io import BytesIO
 
 import numpy as np
@@ -85,10 +86,7 @@ def test_daily_seasonality_fixture_is_exact_for_seasonal_naive_24() -> None:
     origins = tuple(series.index[24 * 7 : 24 * 8].to_pydatetime())
     actual = np.asarray(
         [
-            [
-                series.at[origin + np.timedelta64(horizon, "h")]
-                for horizon in range(1, 25)
-            ]
+            [series.at[origin + timedelta(hours=horizon)] for horizon in range(1, 25)]
             for origin in origins
         ],
         dtype=np.float64,
