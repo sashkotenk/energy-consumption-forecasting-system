@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -15,11 +16,13 @@ import { DataQualityPage } from './DataQualityPage'
 import { ImportWizardPage } from './ImportWizardPage'
 import { ModelComparisonPage } from './ModelComparisonPage'
 
-const chartInstance = {
-  setOption: vi.fn(),
-  resize: vi.fn(),
-  dispose: vi.fn(),
-}
+const { chartInstance } = vi.hoisted(() => ({
+  chartInstance: {
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+  },
+}))
 
 vi.mock('echarts', () => ({ init: vi.fn(() => chartInstance) }))
 
@@ -29,7 +32,7 @@ function queryClient() {
   })
 }
 
-function renderRoute(path: string, routePath: string, element: React.ReactNode) {
+function renderRoute(path: string, routePath: string, element: ReactNode) {
   return render(
     <QueryClientProvider client={queryClient()}>
       <MemoryRouter initialEntries={[path]}>
