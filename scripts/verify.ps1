@@ -105,6 +105,11 @@ try {
         Assert-LastExitCode -CommandName "evidence checksum verification"
     }
 
+    if (Test-Path "docs/evidence/point5-handoff.json") {
+        python scripts/verify_point5_handoff.py
+        Assert-LastExitCode -CommandName "Point-5 handoff verification"
+    }
+
     git diff --check
     Assert-LastExitCode -CommandName "git diff --check"
 
