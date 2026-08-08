@@ -28,6 +28,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "coverage[toml]>=7.10,<8",
     "httpx2>=2.9,<3",
     "mypy>=1.17,<2",
     "pytest>=8.4,<10",
@@ -54,7 +55,16 @@ markers = [
     "integration: requires a real PostgreSQL/TimescaleDB server",
     "ml_guard: mandatory time-series leakage and reproducibility checks",
     "performance: deterministic local smoke benchmark",
+    "full_dataset: manual or scheduled profile requiring the external UCI source file",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["energy_forecast"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 
 [tool.ruff]
 line-length = 100

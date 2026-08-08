@@ -42,14 +42,14 @@ $env:TEST_DATABASE_URL = $env:DATABASE_URL
 
 Push-Location (Join-Path $repositoryRoot "backend")
 try {
-    Invoke-Uv -Arguments @("sync", "--all-groups")
-    Invoke-Uv -Arguments @("run", "ruff", "check", ".")
-    Invoke-Uv -Arguments @("run", "ruff", "format", "--check", ".")
-    Invoke-Uv -Arguments @("run", "mypy", "src", "tests")
-    Invoke-Uv -Arguments @("run", "python", "../scripts/export_openapi.py", "--check")
-    Invoke-Uv -Arguments @("run", "alembic", "upgrade", "head")
-    Invoke-Uv -Arguments @("run", "alembic", "check")
-    Invoke-Uv -Arguments @("run", "pytest", "-m", "not performance")
+    Invoke-Uv -Arguments @("sync", "--all-groups", "--frozen")
+    Invoke-Uv -Arguments @("run", "--frozen", "ruff", "check", ".")
+    Invoke-Uv -Arguments @("run", "--frozen", "ruff", "format", "--check", ".")
+    Invoke-Uv -Arguments @("run", "--frozen", "mypy", "src", "tests")
+    Invoke-Uv -Arguments @("run", "--frozen", "python", "../scripts/export_openapi.py", "--check")
+    Invoke-Uv -Arguments @("run", "--frozen", "alembic", "upgrade", "head")
+    Invoke-Uv -Arguments @("run", "--frozen", "alembic", "check")
+    Invoke-Uv -Arguments @("run", "--frozen", "pytest", "-m", "not performance and not full_dataset")
 }
 finally {
     Pop-Location

@@ -75,8 +75,16 @@ jobs:
       - name: Check migration drift
         run: uv run --frozen alembic check
 
-      - name: Test
-        run: uv run --frozen pytest -m "not performance"
+      - name: Run mandatory ML guards
+        run: uv run --frozen pytest -m ml_guard
+
+      - name: Test with coverage
+        run: uv run --frozen coverage run -m pytest -m "not performance and not full_dataset"
+
+      - name: Report critical domain coverage
+        run: >-
+          uv run --frozen coverage report
+          --include="src/energy_forecast/datasets/*,src/energy_forecast/quality/*,src/energy_forecast/transformations/*,src/energy_forecast/ml/*,src/energy_forecast/experiments/*,src/energy_forecast/forecasting/*,src/energy_forecast/exports/*"
 
   frontend:
     name: Frontend
@@ -112,6 +120,32 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  browser:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run primary browser flow
+        run: npm run e2e
 
   repository:
     name: Repository verification
