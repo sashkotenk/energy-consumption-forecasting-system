@@ -24,7 +24,23 @@ const { chartInstance } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('echarts', () => ({ init: vi.fn(() => chartInstance) }))
+vi.mock('echarts/core', () => ({
+  init: vi.fn(() => chartInstance),
+  use: vi.fn(),
+}))
+vi.mock('echarts/charts', () => ({
+  BarChart: {},
+  HeatmapChart: {},
+  LineChart: {},
+}))
+vi.mock('echarts/components', () => ({
+  DataZoomComponent: {},
+  GridComponent: {},
+  LegendComponent: {},
+  TooltipComponent: {},
+  VisualMapComponent: {},
+}))
+vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }))
 
 function queryClient() {
   return new QueryClient({
