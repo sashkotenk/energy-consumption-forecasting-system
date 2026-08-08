@@ -6,7 +6,7 @@ that owns the defect.
 
 ## Pull request and main gates
 
-The workflow keeps verification concerns independent so the failing owner is visible immediately:
+The main verification workflow keeps concerns independent so the failing owner is visible immediately:
 
 - backend Ruff lint and format check;
 - strict backend mypy;
@@ -22,9 +22,14 @@ The workflow keeps verification concerns independent so the failing owner is vis
 - Gitleaks history/private-file scan, Python/npm dependency audit and container vulnerability scan;
 - repository-wide `scripts/verify.ps1`, workflow YAML parsing and `git diff --check`.
 
-The workflow uses repository read-only permissions and does not require application secrets for pull
-requests. Production-like Compose configuration fails fast when real deployment credentials and
-immutable commit metadata are omitted.
+TASK-22 adds a separate pull-request **Release Evidence** workflow. It verifies documentation
+links/Mermaid sources, runs a deterministic release benchmark plus the `performance` marker, captures
+a screenshot from the successful Playwright primary flow and uploads benchmark/browser evidence for
+review. Committed evidence is checksum-verified by `scripts/verify_evidence.py`.
+
+The workflows use repository read-only permissions and do not require application secrets for pull
+requests. Production-like Compose configuration fails fast when deployment credentials and immutable
+commit metadata are omitted.
 
 ## Deterministic synthetic fixtures
 
@@ -62,10 +67,10 @@ and failure ownership explicit.
 
 Integration jobs use the same pinned TimescaleDB/PostgreSQL major baseline as Docker Compose. The
 migration gate executes `alembic upgrade head` and `alembic check`; repository verification repeats
-those checks against the development database. TASK-21 introduces no schema change, so a deployment
-failure must not be hidden by generating an empty migration.
+those checks against the development database. The release migration head is `c3d9a5f27410`. TASK-22
+changes no schema, so no migration is added merely to create activity.
 
-## Browser E2E
+## Browser E2E and screenshot evidence
 
 From `frontend`, after installing the locked dependencies and Chromium:
 
@@ -82,6 +87,9 @@ import -> quality/transform -> analysis -> experiment -> comparison -> forecast 
 ```
 
 Playwright uses explicit UI assertions and application terminal states rather than arbitrary sleeps.
+In CI, successful runs also capture a browser screenshot into `test-results`; the Release Evidence
+workflow uploads that directory so representative UI evidence can be copied into the public evidence
+pack from a verified run.
 
 ## Container and Compose smoke
 
@@ -94,6 +102,9 @@ private-file exclusion.
 uses Compose health-state waiting, checks the SPA and `/api/v1/health/ready`, verifies the migration
 container exit code, and always destroys the temporary project. It does not use fixed sleeps.
 
+Together with the deterministic Playwright primary journey, this provides the clean-deployment and
+end-to-end release gates without coupling browser correctness to a large external UCI fixture.
+
 ## Security and dependency scans
 
 Pull requests and `main` run:
@@ -105,19 +116,33 @@ Pull requests and `main` run:
 - Trivy high/critical, fixed-vulnerability checks for backend, web and edge images.
 
 A reported vulnerability is treated as a real dependency/container defect to investigate; checks are
-not bypassed by suppressing assertions solely to obtain green CI.
+not bypassed by suppressing assertions solely to obtain green CI. The release-specific trust-boundary
+review is stored in `docs/evidence/security-review.md`.
 
-## Scheduled smoke
+## Performance evidence
+
+The ordinary `performance` marker keeps parser incremental memory bounded. TASK-22 also provides:
+
+```text
+cd backend
+uv run --frozen python ../scripts/generate_release_benchmark.py --output ../build/release-benchmark.json
+uv run --frozen pytest -m performance
+```
+
+The deterministic benchmark records runner CPU/memory/Python profile and measured parser, quality,
+transformation, bounded-analytics, FastAPI liveness and direct-24 Ridge train/predict timings. Model
+training uses a warmup followed by three measured fits; prediction records median and p95 across 30
+repetitions. The synthetic benchmark is engineering evidence, not a substitute for the final UCI
+scientific experiment.
 
 The nightly schedule additionally runs the deterministic performance marker and a focused classical-ML
-fixture suite. The full UCI source remains external to Git and is not silently downloaded into normal
-CI.
+fixture suite.
 
 ## Full UCI profile
 
 The complete UCI Individual Household Electric Power Consumption file is deliberately not stored in
-the repository and is excluded from normal PR CI. A manual or scheduled profile can stream the
-external source without copying it into Git:
+the repository and is excluded from normal PR CI. A manual profile can stream the external source
+without copying it into Git:
 
 ```text
 ENERGYFORECAST_UCI_PATH=<path-to-household_power_consumption.txt>
@@ -128,6 +153,19 @@ On PowerShell set the environment variable with `$env:ENERGYFORECAST_UCI_PATH` b
 script. The profile is marked `full_dataset`; normal verification selects
 `not performance and not full_dataset`.
 
+## Documentation and evidence integrity
+
+Run from the repository root:
+
+```text
+python scripts/verify_documentation.py
+python scripts/verify_evidence.py
+```
+
+The first command checks repository-local Markdown targets and Mermaid source structure. The second
+recomputes SHA-256 values from `docs/evidence/handoff-manifest.json`. Both run from the final
+repository-wide verification gate once the evidence manifest exists.
+
 ## Coverage policy
 
 Coverage is diagnostic evidence, not a reason to relax assertions, tolerances, leakage guards or
@@ -135,4 +173,5 @@ error handling. The CI report focuses on critical domain and application package
 should lead to a meaningful test only when the behavior is relevant; no production branch is excluded
 or weakened solely to increase a percentage.
 
-Exact execution counts, coverage and CI run evidence are recorded in `docs/implementation-log.md`.
+Exact execution counts, coverage, benchmark measurements and CI run evidence are recorded in
+`docs/implementation-log.md` and `docs/evidence/verification.md`.
