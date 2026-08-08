@@ -1,10 +1,12 @@
-name: Baseline CI
+name: Verification CI
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "37 2 * * *"
 
 permissions:
   contents: read
@@ -14,8 +16,85 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend
+  backend-lint:
+    name: Backend lint and format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen ruff format --check .
+
+  backend-typecheck:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen mypy src tests
+
+  backend-unit:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen pytest tests/unit -m "not performance and not full_dataset"
+
+  ml-guards:
+    name: Mandatory ML guards
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen pytest -m ml_guard
+
+  backend-integration:
+    name: Backend PostgreSQL/TimescaleDB integration
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
@@ -34,128 +113,314 @@ jobs:
           --health-cmd "pg_isready -U energyforecast -d energyforecast"
           --health-interval 2s
           --health-timeout 5s
-          --health-retries 20
+          --health-retries 30
     defaults:
       run:
         working-directory: backend
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version-file: backend/.python-version
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.12.2"
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen alembic upgrade head
+      - run: uv run --frozen pytest tests/integration -m "not performance and not full_dataset"
 
-      - name: Install locked dependencies
-        run: uv sync --all-groups --frozen
+  backend-migrations:
+    name: Alembic upgrade and drift
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+      TEST_DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+    services:
+      db:
+        image: timescale/timescaledb:2.28.3-pg17
+        env:
+          POSTGRES_DB: energyforecast
+          POSTGRES_USER: energyforecast
+          POSTGRES_PASSWORD: energyforecast
+          TIMESCALEDB_TELEMETRY: "off"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U energyforecast -d energyforecast"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen alembic upgrade head
+      - run: uv run --frozen alembic check
 
-      - name: Lint
-        run: uv run --frozen ruff check .
-
-      - name: Check formatting
-        run: uv run --frozen ruff format --check .
-
-      - name: Type check
-        run: uv run --frozen mypy src tests
-
-      - name: Verify runtime OpenAPI artifact
-        run: uv run --frozen python ../scripts/export_openapi.py --check
-
-      - name: Upgrade database
-        run: uv run --frozen alembic upgrade head
-
-      - name: Check migration drift
-        run: uv run --frozen alembic check
-
-      - name: Run mandatory ML guards
-        run: uv run --frozen pytest -m ml_guard
-
-      - name: Test with coverage
-        run: uv run --frozen coverage run -m pytest -m "not performance and not full_dataset"
-
-      - name: Report critical domain coverage
-        run: >-
+  backend-coverage:
+    name: Backend coverage
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+      TEST_DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+    services:
+      db:
+        image: timescale/timescaledb:2.28.3-pg17
+        env:
+          POSTGRES_DB: energyforecast
+          POSTGRES_USER: energyforecast
+          POSTGRES_PASSWORD: energyforecast
+          TIMESCALEDB_TELEMETRY: "off"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U energyforecast -d energyforecast"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen coverage run -m pytest -m "not performance and not full_dataset"
+      - run: >-
           uv run --frozen coverage report
           --include="src/energy_forecast/datasets/*,src/energy_forecast/quality/*,src/energy_forecast/transformations/*,src/energy_forecast/ml/*,src/energy_forecast/experiments/*,src/energy_forecast/forecasting/*,src/energy_forecast/exports/*"
 
-  frontend:
-    name: Frontend
+  openapi-sdk-drift:
+    name: OpenAPI and generated SDK drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --all-groups --frozen
+      - name: Verify runtime OpenAPI artifact
+        working-directory: backend
+        run: uv run --frozen python ../scripts/export_openapi.py --check
+      - name: Verify design/runtime contract assertions
+        working-directory: backend
+        run: uv run --frozen pytest tests/unit/test_openapi_contract.py
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Verify generated SDK drift
+        working-directory: frontend
+        run: npm run api:check
+
+  frontend-lint:
+    name: Frontend lint
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Install locked dependencies
-        run: npm ci
+  frontend-typecheck:
+    name: Frontend typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
 
-      - name: Verify generated API SDK drift
-        run: npm run api:check
+  frontend-unit:
+    name: Frontend component tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test -- --run
 
-      - name: Lint
-        run: npm run lint
+  frontend-build:
+    name: Frontend production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm run test -- --run
-
-      - name: Build
-        run: npm run build
-
-  browser:
+  browser-e2e:
     name: Browser E2E
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
 
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Run primary browser flow
-        run: npm run e2e
-
-  repository:
-    name: Repository verification
+  docker-build:
+    name: Container build and Compose smoke
     runs-on: ubuntu-latest
+    env:
+      CODE_COMMIT: ${{ github.sha }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Verify Compose models and hardening
+        run: python scripts/verify_infrastructure.py
+      - name: Build container images
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml build --pull
+      - name: Clean-volume Compose smoke
+        run: bash scripts/compose-smoke.sh
 
+  secret-scan:
+    name: Secret and private-file scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Scan Git history with Gitleaks
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/repo"
+          zricethezav/gitleaks:v8.24.3
+          detect --source=/repo --no-banner --redact
+      - name: Reject private planning/specification paths
+        run: |
+          if git ls-files | grep -E '(^|/)(AGENTS\.md|prompts/|checklists?/|Пункт плану|План виконання|EnergyForecast-private)' ; then
+            echo "Private planning/specification material must not be tracked."
+            exit 1
+          fi
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Export locked backend production requirements
+        working-directory: backend
+        run: uv export --frozen --no-dev --no-emit-project --no-hashes --output-file /tmp/backend-requirements.txt
+      - name: Audit backend dependencies
+        run: uvx --from pip-audit==2.9.0 pip-audit --strict --requirement /tmp/backend-requirements.txt
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  container-vulnerability-scan:
+    name: Container vulnerability scan
+    runs-on: ubuntu-latest
+    env:
+      CODE_COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build production images
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml build
+      - name: Scan backend image
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.58.2 image --scanners vuln --ignore-unfixed
+          --severity HIGH,CRITICAL --exit-code 1 energyforecast-backend:0.1.0
+      - name: Scan web image
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.58.2 image --scanners vuln --ignore-unfixed
+          --severity HIGH,CRITICAL --exit-code 1 energyforecast-web:0.1.0
+      - name: Scan edge proxy image
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.58.2 image --scanners vuln --ignore-unfixed
+          --severity HIGH,CRITICAL --exit-code 1 energyforecast-nginx:0.1.0
+
+  repository:
+    name: Repository-wide verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Check patch whitespace
         shell: bash
         run: |
@@ -165,26 +430,60 @@ jobs:
             base="$(git rev-parse HEAD^)"
           fi
           git diff --check "$base"..HEAD
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Parse workflow YAML
+        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
+      - uses: actions/setup-python@v6
         with:
           python-version-file: backend/.python-version
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.12.2"
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Run repository verification script
-        shell: pwsh
+      - shell: pwsh
         run: ./scripts/verify.ps1
+
+  nightly-performance:
+    name: Nightly performance smoke
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen pytest -m performance
+
+  nightly-ml-small-fixture:
+    name: Nightly deterministic ML fixture
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --all-groups --frozen
+      - run: uv run --frozen pytest tests/unit/test_ml_guard.py tests/unit/test_ml_models.py tests/unit/test_ml_metrics_baselines_registry.py

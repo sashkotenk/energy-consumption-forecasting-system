@@ -51,6 +51,7 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "integration: requires a real PostgreSQL/TimescaleDB server",
     "ml_guard: mandatory time-series leakage and reproducibility checks",

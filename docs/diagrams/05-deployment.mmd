@@ -1,27 +1,29 @@
 flowchart LR
     browser["User Browser"]
 
-    subgraph host["Docker Host / VPS"]
+    subgraph host["Docker Host / private VPS"]
       subgraph edge["Edge network"]
-        nginx["Nginx"]
-        web["React static container"]
-        api["FastAPI API"]
+        nginx["Nginx edge :8080\nsecurity headers / 300 MiB limit"]
+        web["React static Nginx :8080\nread-only / non-root"]
+        api["FastAPI API :8000\nread-only / non-root"]
       end
-      subgraph backend["Backend network"]
-        worker["Python Worker"]
+      subgraph backend["Internal backend network"]
+        worker["Python Worker\nread-only / non-root"]
         migrate["Alembic one-shot"]
-        db[("TimescaleDB/PostgreSQL")]
+        db[("TimescaleDB 2.28.3\nPostgreSQL 17")]
       end
-      volume[("Artifact volume")]
-      dbvol[("PostgreSQL volume")]
+      artifacts[("artifact_data named volume")]
+      dbvol[("postgres_data named volume")]
     end
 
-    browser -->|"HTTPS"| nginx
-    nginx --> web
-    nginx --> api
+    browser -->|"HTTP(S) via external TLS/access layer"| nginx
+    nginx -->|"/"| web
+    nginx -->|"/api/v1/ (prefix stripped)"| api
+    db -->|"healthy"| migrate
+    migrate -->|"completed successfully"| api
+    migrate -->|"completed successfully"| worker
     api --> db
     worker --> db
-    migrate --> db
-    api --> volume
-    worker --> volume
+    api --> artifacts
+    worker --> artifacts
     db --> dbvol

@@ -18,13 +18,16 @@ The project can currently:
 - compare persisted fold/horizon metrics and save checksum-verified model bundles;
 - create reproducible 24-hour forecasts with provenance and a daily energy total;
 - export forecast CSV and chart-ready JSON plus experiment metrics/manifest data as checksum-tracked
-  artifacts, then download only export-purpose artifacts through a controlled endpoint.
+  artifacts, then download only export-purpose artifacts through a controlled endpoint;
+- run as a hardened six-service Docker Compose stack with an explicit migration gate, separate API
+  and worker processes, private PostgreSQL/TimescaleDB, non-root static/edge containers and same-origin
+  `/api/v1` proxying.
 
 The API is built with FastAPI, PostgreSQL and TimescaleDB. Its OpenAPI 3.1 document is exported
 deterministically and generates the committed TypeScript SDK under `frontend/src/generated/api`. The
-React/Vite frontend now provides Ukrainian workflows for dataset import and analysis, experiment
-creation and terminal-state handling, baseline model comparison, 24-hour forecast review and
-controlled exports.
+React/Vite frontend provides Ukrainian workflows for dataset import and analysis, experiment creation
+and terminal-state handling, baseline model comparison, 24-hour forecast review and controlled
+exports.
 
 ## Toolchain
 
@@ -34,22 +37,45 @@ controlled exports.
 | Python project manager | uv 0.12.2 |
 | Node.js | 24.18.0 LTS |
 | Frontend package manager | npm with committed `package-lock.json` |
+| PostgreSQL / TimescaleDB | PostgreSQL 17 / TimescaleDB 2.28.3 |
+| Nginx runtime | 1.30.4 / Alpine 3.24 |
 
-Resolved application and development dependency versions are recorded in [`docs/implementation-log.md`](docs/implementation-log.md).
+Resolved application/development dependency versions and executed verification evidence are recorded
+in [`docs/implementation-log.md`](docs/implementation-log.md).
 
 ## Repository layout
 
 ```text
-backend/                 Python package and backend tests
-frontend/                React application and frontend tests
-infrastructure/          reserved for deployment assets
+backend/                 Python package, backend container and backend tests
+frontend/                React application, static container and frontend tests
+infrastructure/          edge proxy deployment assets
 tests/                   reserved for repository-level system tests
 docs/                    versioned product technical documentation
 .github/workflows/       continuous integration
-scripts/                 repository verification helpers
+scripts/                 repository and deployment verification helpers
 ```
 
-Private prompts, coursework planning files, raw datasets, uploaded files, generated models, local artifacts, and secrets do not belong in this repository.
+Private prompts, coursework planning files, raw datasets, uploaded files, generated models, local
+artifacts, and secrets do not belong in this repository.
+
+## Run the complete product
+
+Install Docker with the Compose plugin and run from the repository root:
+
+```text
+docker compose up --build
+```
+
+The development override publishes the application at `http://127.0.0.1:8080` and PostgreSQL at
+`127.0.0.1:5432`. Compose waits for database health and the one-shot Alembic migration before API and
+worker startup. Stop and remove the stack with:
+
+```text
+docker compose down
+```
+
+See [`docs/deployment.md`](docs/deployment.md) for the production-like overlay, security controls,
+health model, resource guidance and backup boundary.
 
 ## Backend development
 
@@ -94,53 +120,43 @@ On PowerShell, run from the repository root:
 ./scripts/verify.ps1
 ```
 
-The script starts the pinned database, applies and drift-checks migrations, runs the real TimescaleDB
-integration tests, runs the remaining backend/frontend checks, and validates `docker-compose.yml`.
+The script validates development/production Compose models and hardening, starts the pinned database
+using health-state waiting, applies and drift-checks migrations, runs the mandatory ML guards and the
+remaining backend/frontend verification, then checks whitespace and accidental private tracked paths.
 
-## Database demonstration
+Linux/CI can additionally validate a fresh full stack with:
 
-Install Docker Desktop and uv, then run from the repository root in PowerShell:
+```text
+bash scripts/compose-smoke.sh
+```
+
+## Direct database/API development
+
+For direct host development, start only the development database:
 
 ```powershell
 docker compose up -d --wait db
 Set-Location backend
 python -m uv sync --all-groups
+$env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
+$env:TEST_DATABASE_URL = $env:DATABASE_URL
 python -m uv run alembic upgrade head
 python -m uv run alembic check
-$env:TEST_DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
-python -m uv run pytest tests/integration/test_database_migrations.py `
-  tests/integration/test_repositories.py -v
+python -m uv run energy-forecast-api
 ```
 
-To show the created schemas and hypertables:
-
-```powershell
-Set-Location ..
-docker compose exec db psql -U energyforecast -d energyforecast -c "\dn"
-docker compose exec db psql -U energyforecast -d energyforecast `
-  -c "SELECT hypertable_schema, hypertable_name FROM timescaledb_information.hypertables ORDER BY 1, 2;"
-```
-
-Start the API with the host-accessible database URL:
+Open `http://localhost:8000/docs` or request `http://localhost:8000/health/ready`. Start the worker in
+another terminal with the same `DATABASE_URL`:
 
 ```powershell
 Set-Location backend
-python -m uv run --env-file ../.env energy-forecast-api
-```
-
-Open `http://localhost:8000/docs` or request `http://localhost:8000/health/ready`. Stop the local
-database later with `docker compose stop db`; data remains in the named volume.
-
-Start the independent worker in another terminal with the same `DATABASE_URL`:
-
-```powershell
-Set-Location backend
-python -m uv run --env-file ../.env energy-forecast-worker
+python -m uv run energy-forecast-worker
 ```
 
 ## Architecture and contracts
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — implemented architecture snapshot;
+- [`docs/deployment.md`](docs/deployment.md) — container topology and deployment hardening;
 - [`docs/api/openapi.json`](docs/api/openapi.json) — authoritative exported runtime OpenAPI 3.1 contract;
 - [`docs/api/openapi-design.yaml`](docs/api/openapi-design.yaml) — design reference retained for planned-contract traceability;
 - [`frontend/src/generated/api/`](frontend/src/generated/api/) — generated TypeScript SDK; never edit generated files manually;

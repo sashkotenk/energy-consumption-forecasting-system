@@ -1189,3 +1189,73 @@ The integrated gate re-exercised the implementation accumulated through TASK-01 
 ### Known limitations
 
 The full UCI profile requires a separately supplied local source and is intentionally excluded from normal pull-request CI to avoid committing or repeatedly downloading the 126+ MB dataset. The production frontend build retains the known Vite chunk-size warning (main JavaScript bundle about 1.58 MB, about 514 kB gzip), and ESLint retains the existing generated-SDK/React Hook Form warnings; neither is a test bypass or TASK-20 functional regression.
+
+## TASK-21 — Hardened Docker Compose, Nginx and CI
+
+**Date:** 2026-08-08
+**Status:** implemented and pull-request CI verified
+
+**Scope:** pinned multi-stage backend and frontend images; dedicated edge Nginx image; six-service Compose topology with an explicit migration gate, API/worker split, private PostgreSQL/TimescaleDB network and application artifact volume; development and production-like overlays; non-root/read-only container hardening; same-origin `/api/v1` proxying; deployment/security verification; split repository CI gates; dependency, secret and container scans; and scheduled performance/ML smoke profiles. Product API contracts, generated SDK, database schema and forecasting/ML behavior remain unchanged.
+
+### Deployment and hardening contract
+
+- Compose resolves exactly `db`, `migrate`, `api`, `worker`, `web` and `nginx`. API and worker wait for database health and successful completion of the one-shot Alembic migration service.
+- The production-like model has no source bind mounts and does not publish PostgreSQL. `db`, `migrate` and `worker` stay off the edge network; only API bridges backend and edge networks. Only API/worker mount `artifact_data`.
+- Backend, static-web and edge images are multi-stage or minimal pinned images with OCI version/source/revision labels. Application/proxy processes run non-root with read-only root filesystems, capability drops and `no-new-privileges`; writable temporary paths use bounded tmpfs mounts.
+- The edge strips `/api/v1` before forwarding to the existing unprefixed FastAPI runtime. It does not synthesize wildcard CORS, rejects direct `/artifacts/`, streams upload bodies, applies bounded proxy timeouts and aligns `client_max_body_size 300m` with the application `314572800`-byte limit.
+- `scripts/verify_infrastructure.py` validates the committed topology and private-file boundary without starting the product. `scripts/compose-smoke.sh` builds a clean-volume stack, waits for real Compose health/completion states, checks the SPA and proxied readiness route, validates the migration exit code and prints service logs on failure without fixed sleeps.
+
+ADR-025 records the deployment boundary. `ARCHITECTURE.md`, `docs/deployment.md`, `docs/testing.md`, the deployment diagram, traceability matrix and README describe only the implemented container/CI behavior. TASK-21 introduces no Alembic revision and no runtime OpenAPI/SDK change.
+
+### Defects found by the expanded gate
+
+The first TASK-21 CI attempts found deployment/test-infrastructure defects directly related to the new gate, and each root cause was fixed in the feature branch:
+
+1. The isolated backend-unit job could not import `tests.fixtures.synthetic`; the test package path is now explicit through `backend/tests/__init__.py` and pytest `pythonpath` configuration.
+2. `pip-audit` received an editable local project from `uv export`; dependency audit now exports only the locked dependency graph with `--no-emit-project`.
+3. Host Alembic/database checks could not reach the development database because it was attached only to an internal Docker network; the development override adds a host-reachable development network while the production-like model remains private.
+4. Nginx health failed because the read-only `/tmp` tmpfs hid image-build temp directories; static and edge containers recreate required Nginx temp directories after tmpfs mounting.
+5. Trivy identified fixed high/critical vulnerabilities in the initial Nginx 1.27.5 Alpine base. Both web and edge images were upgraded to the pinned `nginx:1.30.4-alpine3.24` base instead of suppressing the scan.
+
+No assertion, ML guard, timeout, tolerance, security rule or production API/database behavior was weakened to obtain green CI.
+
+### Pull-request verification evidence
+
+Pull request #21 Verification CI run 105 (`31244066735`) completed successfully on the merge candidate for feature head `12fc2fd711169696916a2450d3483d55c7b6f4dd`. All required pull-request jobs completed with `success`; the two nightly-only jobs were correctly skipped because the event was not `schedule`.
+
+| CI job / gate | Actual result |
+|---|---|
+| Backend locked dependency sync | exit 0 with uv 0.12.2 / Python 3.13.14 |
+| Backend Ruff lint | exit 0; all checks passed |
+| Backend Ruff format | exit 0; 136 files already formatted |
+| Backend mypy | exit 0; no issues in 132 source files |
+| Backend unit tests | exit 0; 154 passed, 1 deselected in 33.47 s |
+| PostgreSQL/TimescaleDB integration tests | exit 0; 42 passed, 1 deselected in 21.82 s |
+| API-focused integration subset | 22 passing tests within the 42-test integration run |
+| Mandatory `ml_guard` suite | exit 0; 15 passed, 184 deselected in 7.82 s |
+| Coverage-backed backend suite | exit 0; 196 passed, 3 deselected in 108.42 s |
+| Critical package coverage | 87% branch-aware coverage; 2,978 statements, 284 missing, 580 branches, 149 partial |
+| Alembic upgrade | exit 0; migrations applied through `c3d9a5f27410` |
+| Alembic drift | exit 0; `No new upgrade operations detected.` |
+| Runtime OpenAPI drift | exit 0; contract synchronized |
+| Design/runtime OpenAPI assertions | exit 0 |
+| Generated TypeScript SDK drift | exit 0; regeneration produced no tracked diff |
+| Frontend `npm ci` | exit 0; 281 packages installed, 282 audited, 0 vulnerabilities |
+| Frontend lint | exit 0; 0 errors, 4 non-failing warnings |
+| Frontend typecheck | exit 0 |
+| Frontend component tests | exit 0; 5 files, 14 tests passed in 5.60 s |
+| Frontend production build | exit 0 |
+| Playwright/Chromium E2E | exit 0; 1 primary scenario passed in 5.7 s |
+| Static infrastructure contract | exit 0; `Infrastructure contract verified` |
+| Container build + clean-volume Compose smoke | exit 0 |
+| Gitleaks + private tracked-path scan | exit 0 |
+| Python/npm dependency audit | exit 0 |
+| Trivy backend/web/edge image scan | exit 0 after the Nginx base-image upgrade |
+| `git diff --check` | exit 0 |
+| `scripts/verify.ps1` repository-wide gate | exit 0; repeated Compose, migration, backend, ML, OpenAPI/SDK and frontend checks successfully |
+
+The CI workflow uses repository read-only permissions and does not require plaintext application secrets for pull requests. The scheduled performance and deterministic small-ML jobs are not claimed as passed in this pull-request run because their schedule-only conditions intentionally skipped them. The full UCI profile also remains external to Git and normal CI.
+
+### Known non-blocking observations
+
+`npm ci` reports an `allow-scripts` review warning for the locked `esbuild@0.28.1` postinstall but reports zero vulnerabilities. ESLint retains three generated-SDK unused-disable warnings and the React Hook Form compiler memoization warning in the import wizard. OpenAPI Generator reports its OpenAPI 3.1 support as beta plus existing server/example/inline-schema generation warnings. The frontend production build retains the known chunk-size warning (main JavaScript about 1.58 MB, 513.94 kB gzip). None of these warnings caused a failed gate or was hidden by a bypass.
