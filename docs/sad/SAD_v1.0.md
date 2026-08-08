@@ -1,8 +1,8 @@
 # EnergyForecast Software Architecture Document
 
-**Document status:** Final v1.0  
-**Release scope:** coursework release candidate through TASK-22  
-**Language:** English  
+**Document status:** Final v1.0
+**Release scope:** coursework release candidate through TASK-22
+**Language:** English
 **Architecture style:** modular monolith with separate API and worker processes
 
 ## 1. Purpose and scope
