@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
+    "e2e": "playwright test",
     "typecheck": "tsc -b --pretty false",
     "api:generate": "node ../scripts/generate_api_sdk.mjs",
     "api:check": "npm run api:generate && git diff --exit-code -- ../docs/api/openapi.json src/generated/api"
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@playwright/test": "1.56.1",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.10.0",
