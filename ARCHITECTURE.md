@@ -6,13 +6,17 @@ The repository implements the backend flow from ingestion and quality processing
 ML experiments, verified 24-hour forecasting and bounded export artifacts. The React product flow now
 covers dataset ingestion and quality review, bounded analytics, experiment creation and terminal-state
 handling, baseline model comparison, verified forecast creation, forecast review and controlled exports.
+The complete product is packaged as a hardened six-service Docker Compose topology with an explicit
+Alembic migration gate, private PostgreSQL/TimescaleDB network, shared application-owned artifact
+volume, non-root/read-only application containers and a same-origin Nginx edge proxy.
 
 ```text
 repository
-├── backend     FastAPI/worker boundaries, SQLAlchemy models, Alembic and tests
-├── frontend    React Router SPA, TanStack Query, generated API SDK, ECharts and component tests
-├── docs        design contracts, ADRs and implementation evidence
-└── CI          backend, frontend and repository-wide verification gates
+├── backend     FastAPI/worker boundaries, SQLAlchemy models, Alembic, backend image and tests
+├── frontend    React Router SPA, generated API SDK, ECharts, static image and component tests
+├── infrastructure  edge Nginx image/configuration
+├── docs        design contracts, ADRs, deployment guide and implementation evidence
+└── CI          backend, frontend, deployment, security and repository-wide verification gates
 ```
 
 The backend exposes FastAPI liveness/readiness endpoints, typed settings, structured JSON logging,
@@ -78,6 +82,19 @@ wrapped once, disposed during cleanup, keyboard-focusable and paired with captio
 alternatives. Loading, empty and error states are shared Ukrainian UI components rather than
 page-local conventions.
 
+The container boundary uses one pinned backend image for `migrate`, `api`, and `worker`, a multi-stage
+React/Nginx static image, a dedicated edge Nginx image, and the pinned TimescaleDB/PostgreSQL image.
+The database is reachable only on the internal backend network in production-like configuration. The
+API joins backend and edge networks, while worker/migrate stay backend-only and web/Nginx stay
+edge-only. `api` and `worker` depend on database health and successful completion of the one-shot
+migration service. Only API and worker mount `artifact_data`; Nginx explicitly rejects direct
+`/artifacts/` paths. The edge forwards same-origin `/api/v1/` requests to the unprefixed FastAPI
+runtime, aligns its `300m` body ceiling with the application `314572800`-byte limit, streams upload
+bodies and applies bounded proxy timeouts and security headers without introducing wildcard CORS.
+Application/proxy containers run non-root where compatible, use read-only root filesystems,
+capability drops, `no-new-privileges`, and bounded tmpfs paths. ADR-025 and `docs/deployment.md` are the
+operational sources for this boundary.
+
 ## Intended system architecture
 
 The accepted design baseline is a modular monolith deployed as separate API and worker processes from one Python codebase. A React single-page application uses the REST API. PostgreSQL with TimescaleDB stores metadata and time-series facts, while a local artifact-store adapter keeps large files outside the database.
@@ -122,6 +139,7 @@ Server state belongs in TanStack Query, form state in React Hook Form and Zod, r
 - `docs/api/openapi.json` — authoritative implemented API contract
 - `docs/api/openapi-design.yaml` — design reference for planned contract traceability
 - `docs/database/schema-design.sql`
+- `docs/deployment.md`
 - `docs/diagrams/`
 - `docs/sad/SAD_draft_v0.1.md`
 - `docs/architecture/adr/README.md`
@@ -131,7 +149,8 @@ The exported runtime OpenAPI is authoritative for implemented routes and generat
 
 ## Reproducibility and safety constraints
 
-- Python, Node and TimescaleDB/PostgreSQL versions are pinned; dependency lockfiles are committed.
+- Python, Node, Nginx and TimescaleDB/PostgreSQL versions are pinned; dependency lockfiles are committed.
+- Production-like Compose has no source bind mounts; application images record version/source/revision OCI labels.
 - Raw data, uploads, model binaries, exports, secrets, database volumes, and local artifacts are ignored.
 - Uploaded filenames are metadata only; generated storage keys are validated and never expose the
   configured absolute root.
@@ -139,6 +158,7 @@ The exported runtime OpenAPI is authoritative for implemented routes and generat
   streams and failed metadata persistence are cleaned up.
 - Dataset uploads enforce the 300 MB application limit while streaming to storage, accept only
   generated-key `.csv`/`.txt` artifacts, sanitize client metadata, and inspect actual tabular text.
+- The edge proxy enforces the same 300 MiB body ceiling and cannot mount or serve the artifact volume.
 - Dataset deletion is rejected once immutable versions/imports exist; it never cascades into artifact
   byte deletion.
 - Model loading accepts only internally produced, checksum-verified bundles with compatible
@@ -151,3 +171,5 @@ The exported runtime OpenAPI is authoritative for implemented routes and generat
 - Controlled downloads allow only export-purpose artifacts, return safe attachment filenames and do
   not expose the internal `storage_key` or configured filesystem root.
 - Textual CSV cells that could be interpreted as spreadsheet formulas are prefixed as literal text.
+- The application still has no built-in authentication; production internet exposure requires an
+  external access-control/TLS boundary rather than weakening the private-network assumption.

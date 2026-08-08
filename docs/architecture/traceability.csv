@@ -4,16 +4,16 @@ FR-02,Data Quality Engine,data_quality_reports data_quality_issues,/dataset-vers
 FR-03,Transformation Pipeline,transformation_runs dataset_versions hourly_observations,/dataset-versions/{versionId}/transformations,energy integration and gap unit; API job worker TimescaleDB E2E
 FR-04,Analytics Query,hourly_observations,/dataset-versions/{versionId}/analytics/*,known-summary and bounded-series API integration; indexed range plan; performance smoke
 FR-05,Feature Pipeline ML Models and Experiment Service,experiments model_runs,/algorithms and /experiments,leakage guards metrics baselines direct-model regression worker E2E and PostgreSQL staging
-FR-06,Comparison Query,fold_metrics horizon_metrics,/experiments/{experimentId}/comparison,selection boundary unit and persisted fold/horizon metrics; UI pending
-FR-07,Forecast Service,forecasts forecast_points,/forecasts,forecast engine unit; verified-bundle API and PostgreSQL E2E
-FR-08,Export and Artifact Service,artifacts,/forecasts/{forecastId}/exports /experiments/{experimentId}/exports /artifacts/{artifactId}/download,UTF-8 stable-order serializer unit; formula filename purpose path-leak security; artifact PostgreSQL download integration
-FR-09,Dataset Catalog,datasets dataset_versions,dataset CRUD and pagination,API and PostgreSQL integration
-FR-10,FastAPI OpenAPI and generated TypeScript SDK,openapi.json and generated/api,implemented FastAPI routes,OpenAPI 3.1 operation-id Problem Details enum and generation drift contract tests
-NFR-01,Configuration logging and health,none,/health/live and /health/ready,unit API contract
+FR-06,Comparison Query,fold_metrics horizon_metrics,/experiments/{experimentId}/comparison,selection boundary unit and persisted fold/horizon metrics; React comparison component and browser flow
+FR-07,Forecast Service,forecasts forecast_points,/forecasts,forecast engine unit; verified-bundle API and PostgreSQL E2E; React forecast component and browser flow
+FR-08,Export and Artifact Service,artifacts,/forecasts/{forecastId}/exports /experiments/{experimentId}/exports /artifacts/{artifactId}/download,UTF-8 stable-order serializer unit; formula filename purpose path-leak security; artifact PostgreSQL download integration; controlled-download browser flow
+FR-09,Dataset Catalog,datasets dataset_versions,dataset CRUD and pagination,API PostgreSQL integration and React dataset routes
+FR-10,FastAPI OpenAPI and generated TypeScript SDK,openapi.json and generated/api,implemented FastAPI routes,OpenAPI 3.1 operation-id Problem Details enum runtime/design and generation drift contract tests
+NFR-01,Configuration logging health and deployment readiness,artifact_data and database,/health/live and /health/ready,unit API contract plus container artifact-writable and Compose health smoke
 NFR-02,Manifests and checksums,JSONB and SHA-256,detail and export endpoints,artifact model-bundle and export checksum integration; feature schema hash tests
 NFR-03,PostgreSQL Job Queue,jobs job_attempts,/jobs enqueue poll cancel retry,state transition unit; queue concurrency recovery worker process integration
 NFR-04,Module boundaries,none,none,architecture import checks
-NFR-05,Docker Compose,volumes,future service health wiring,compose smoke
-NFR-06,Error boundary upload and controlled download handling,generated storage keys,upload limits Problem Details and artifact download,filename formula purpose path leakage content-type size and cleanup security tests
-NFR-07,React pages and widgets,none,query endpoints,component E2E
-NFR-08,SQLAlchemy and Alembic persistence,app ts ml schemas,none,TimescaleDB migration repository integration
+NFR-05,Hardened Docker Compose and Nginx,postgres_data artifact_data,/api/v1 same-origin edge route,static infrastructure contract; clean-volume compose smoke; image vulnerability scan
+NFR-06,Error boundary upload and controlled download handling,generated storage keys,upload limits Problem Details and artifact download,filename formula purpose path leakage content-type size and cleanup security tests; 300 MiB edge/application alignment
+NFR-07,React pages and widgets,none,query endpoints,component and Playwright E2E
+NFR-08,SQLAlchemy and Alembic persistence,app ts ml schemas,none,TimescaleDB migration repository integration and CI migration drift

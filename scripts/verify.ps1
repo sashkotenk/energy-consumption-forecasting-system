@@ -28,15 +28,35 @@ function Assert-LastExitCode {
 
 Push-Location $repositoryRoot
 try {
-    docker compose -f docker-compose.yml config
-    Assert-LastExitCode -CommandName "docker compose config"
-    docker compose -f docker-compose.yml up -d db
-    Assert-LastExitCode -CommandName "docker compose up -d db"
-    Start-Sleep -Seconds 5
+    docker compose -f docker-compose.yml -f docker-compose.override.yml config | Out-Null
+    Assert-LastExitCode -CommandName "development docker compose config"
+
+    $oldPostgresPassword = $env:POSTGRES_PASSWORD
+    $oldDatabaseUrl = $env:DATABASE_URL
+    $oldCodeCommit = $env:CODE_COMMIT
+    try {
+        $env:POSTGRES_PASSWORD = "verification-only"
+        $env:DATABASE_URL = "postgresql+asyncpg://energyforecast:verification-only@db:5432/energyforecast"
+        $env:CODE_COMMIT = "verification"
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml config | Out-Null
+        Assert-LastExitCode -CommandName "production docker compose config"
+    }
+    finally {
+        $env:POSTGRES_PASSWORD = $oldPostgresPassword
+        $env:DATABASE_URL = $oldDatabaseUrl
+        $env:CODE_COMMIT = $oldCodeCommit
+    }
+
+    python scripts/verify_infrastructure.py
+    Assert-LastExitCode -CommandName "infrastructure contract verification"
+
+    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --wait db
+    Assert-LastExitCode -CommandName "docker compose up -d --wait db"
 }
 finally {
     Pop-Location
 }
+
 $env:DATABASE_URL = "postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast"
 $env:TEST_DATABASE_URL = $env:DATABASE_URL
 
@@ -49,6 +69,7 @@ try {
     Invoke-Uv -Arguments @("run", "--frozen", "python", "../scripts/export_openapi.py", "--check")
     Invoke-Uv -Arguments @("run", "--frozen", "alembic", "upgrade", "head")
     Invoke-Uv -Arguments @("run", "--frozen", "alembic", "check")
+    Invoke-Uv -Arguments @("run", "--frozen", "pytest", "-m", "ml_guard")
     Invoke-Uv -Arguments @("run", "--frozen", "pytest", "-m", "not performance and not full_dataset")
 }
 finally {
@@ -69,6 +90,20 @@ try {
     Assert-LastExitCode -CommandName "npm run test -- --run"
     npm run build
     Assert-LastExitCode -CommandName "npm run build"
+}
+finally {
+    Pop-Location
+}
+
+Push-Location $repositoryRoot
+try {
+    git diff --check
+    Assert-LastExitCode -CommandName "git diff --check"
+
+    $privatePaths = git ls-files | Select-String -Pattern '(^|/)(AGENTS\.md|prompts/|checklists?/|Пункт плану|План виконання|EnergyForecast-private)'
+    if ($privatePaths) {
+        throw "Private planning/specification material is tracked: $($privatePaths -join ', ')"
+    }
 }
 finally {
     Pop-Location
