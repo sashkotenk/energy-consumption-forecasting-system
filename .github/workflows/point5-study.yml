@@ -1,0 +1,235 @@
+name: Point 5 Full UCI Study
+
+on:
+  push:
+    branches: [ml-study]
+    paths-ignore:
+      - "docs/evidence/point5-run/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DATABASE_URL: postgresql+asyncpg://energyforecast:energyforecast@localhost:5432/energyforecast
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+
+jobs:
+  full-study:
+    name: Full UCI chronological ML study
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    services:
+      db:
+        image: timescale/timescaledb:2.28.3-pg17
+        env:
+          POSTGRES_DB: energyforecast
+          POSTGRES_USER: energyforecast
+          POSTGRES_PASSWORD: energyforecast
+          TIMESCALEDB_TELEMETRY: "off"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U energyforecast -d energyforecast"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.2"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install locked backend environment
+        working-directory: backend
+        run: uv sync --all-groups --frozen
+
+      - name: Apply PostgreSQL/TimescaleDB migrations
+        working-directory: backend
+        run: uv run --frozen alembic upgrade head
+
+      - name: Download original UCI household power source
+        run: |
+          set -euo pipefail
+          mkdir -p point5-work/uci
+          curl --fail --location --retry 5 --retry-delay 3 \
+            "https://archive.ics.uci.edu/static/public/235/individual+household+electric+power+consumption.zip" \
+            --output point5-work/uci-source.zip
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          archive = Path("point5-work/uci-source.zip")
+          target = Path("point5-work/uci")
+          expected = "household_power_consumption.txt"
+          with zipfile.ZipFile(archive) as bundle:
+              names = bundle.namelist()
+              matches = [name for name in names if Path(name).name == expected]
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected exactly one {expected}; archive contains: {names}")
+              with bundle.open(matches[0]) as source, (target / expected).open("wb") as destination:
+                  while chunk := source.read(1024 * 1024):
+                      destination.write(chunk)
+          print((target / expected).stat().st_size)
+          PY
+
+      - name: Validate the full external UCI streaming profile
+        working-directory: backend
+        env:
+          ENERGYFORECAST_UCI_PATH: ${{ github.workspace }}/point5-work/uci/household_power_consumption.txt
+        run: uv run --frozen pytest -m full_dataset tests/manual/test_uci_full_profile.py
+
+      - name: Prepare immutable raw and hourly UCI dataset versions
+        working-directory: backend
+        run: >-
+          uv run --frozen python ../scripts/prepare_point5_dataset.py
+          --database-url "$DATABASE_URL"
+          --artifact-root ../point5-work/artifact-store
+          --uci-path ../point5-work/uci/household_power_consumption.txt
+          --output ../point5-work/dataset-preparation.json
+
+      - name: Fetch ERA5-Land research weather ablation source
+        run: >-
+          python scripts/fetch_point5_weather.py
+          --csv-output point5-work/weather.csv
+          --metadata-output point5-work/weather-metadata.json
+
+      - name: Bind the Point-5 handoff to the real UCI source and hourly UUID
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          UCI_SHA="$(python -c 'import json; print(json.load(open("../point5-work/dataset-preparation.json"))["source_sha256"])')"
+          DATASET_VERSION="$(python -c 'import json; print(json.load(open("../point5-work/dataset-preparation.json"))["prepared_dataset_version_id"])')"
+          uv run --frozen python ../scripts/generate_point5_handoff.py \
+            --dataset-sha256 "$UCI_SHA" \
+            --prepared-dataset-version "$DATASET_VERSION" \
+            --require-dataset-binding \
+            --release-candidate-sha "$GITHUB_SHA" \
+            --output ../point5-work/point5-handoff.json
+          uv run --frozen python ../scripts/verify_point5_handoff.py \
+            --path ../point5-work/point5-handoff.json \
+            --require-dataset-binding
+
+      - name: Execute final chronological ML campaign
+        working-directory: backend
+        run: >-
+          uv run --frozen python ../scripts/run_point5_campaign.py
+          --database-url "$DATABASE_URL"
+          --artifact-root ../point5-work/artifact-store
+          --preparation-json ../point5-work/dataset-preparation.json
+          --handoff-json ../point5-work/point5-handoff.json
+          --weather-csv ../point5-work/weather.csv
+          --weather-metadata ../point5-work/weather-metadata.json
+          --output-dir ../point5-work/evidence
+          --release-candidate-sha "$GITHUB_SHA"
+          --max-tree-candidates 4
+
+      - name: Verify required Point-5 evidence outputs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          root = Path("point5-work/evidence")
+          required = {
+              "README.md",
+              "point5-handoff.json",
+              "dataset-preparation.json",
+              "weather-metadata.json",
+              "selection-decision.json",
+              "search-results.csv",
+              "fold-results.csv",
+              "final-results.csv",
+              "horizon-results.csv",
+              "final-predictions.csv",
+              "bootstrap.json",
+              "benchmark.json",
+              "product-forecast.json",
+              "actual-vs-forecast.svg",
+              "mae-by-horizon.svg",
+              "cv-model-comparison.svg",
+              "run-manifest.json",
+              "selected-model.joblib",
+          }
+          missing = sorted(name for name in required if not (root / name).is_file())
+          if missing:
+              raise SystemExit(f"Missing Point-5 evidence: {missing}")
+
+          manifest = json.loads((root / "run-manifest.json").read_text(encoding="utf-8"))
+          if manifest["protocol"]["selection_persisted_before_final_test"] is not True:
+              raise SystemExit("Selection was not persisted before final-test access")
+          if manifest["weather"]["operational_forecast_claim"] is not False:
+              raise SystemExit("W1 must remain an idealized research ablation")
+          if len(manifest["product_integration"]["points"]) != 24:
+              raise SystemExit("Product forecast must contain exactly 24 points")
+
+          handoff = json.loads((root / "point5-handoff.json").read_text(encoding="utf-8"))
+          if handoff["dataset"]["binding_status"] != "bound_external_uci_profile":
+              raise SystemExit("Committed run evidence requires a bound UCI handoff")
+
+          with (root / "final-results.csv").open(newline="", encoding="utf-8") as source:
+              rows = list(csv.DictReader(source))
+          identifiers = {row["experiment_id"] for row in rows}
+          expected = {"E00", "E01", "E10", "E11", "E12", "E20", "E21", "E22", "E30", "E31", "E32"}
+          if identifiers != expected:
+              raise SystemExit(f"Experiment matrix drifted: {identifiers}")
+          if sum(row["recommended"] == "true" for row in rows) != 1:
+              raise SystemExit("Exactly one W0 configuration must be recommended")
+
+          with (root / "horizon-results.csv").open(newline="", encoding="utf-8") as source:
+              horizon_rows = list(csv.DictReader(source))
+          if len(horizon_rows) != 11 * 24:
+              raise SystemExit("Horizon evidence must contain 24 rows for every E00-E32 experiment")
+          PY
+
+      - name: Upload complete scientific evidence artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: point5-full-study-${{ github.sha }}
+          path: point5-work/evidence
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit bounded report evidence to the study branch
+        run: |
+          set -euo pipefail
+          rm -rf docs/evidence/point5-run
+          mkdir -p docs/evidence/point5-run
+          cp -a point5-work/evidence/. docs/evidence/point5-run/
+          rm -f docs/evidence/point5-run/selected-model.joblib
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("docs/evidence/point5-run/final-predictions.csv")
+          target = Path("docs/evidence/point5-run/final-predictions-sample.csv")
+          with source.open(encoding="utf-8") as reader, target.open("w", encoding="utf-8") as writer:
+              for index, line in enumerate(reader):
+                  if index > 96:
+                      break
+                  writer.write(line)
+          source.unlink()
+          PY
+          git add docs/evidence/point5-run
+          if git diff --cached --quiet; then
+            echo "Point-5 evidence is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: record full UCI Point 5 study"
+          git push origin HEAD:ml-study
