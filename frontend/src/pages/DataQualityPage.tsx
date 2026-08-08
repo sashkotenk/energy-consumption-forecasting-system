@@ -46,7 +46,7 @@ export function DataQualityPage() {
 
   useEffect(() => {
     if (job.data?.status === JobStatus.Succeeded && transform.data?.targetVersionId && report.data) {
-      navigate(analysisUrl(transform.data.targetVersionId, report.data.summary as Record<string, unknown>, report.data.items), { replace: true })
+      void navigate(analysisUrl(transform.data.targetVersionId, report.data.summary, report.data.items), { replace: true })
     }
   }, [job.data?.status, navigate, report.data, transform.data?.targetVersionId])
 
