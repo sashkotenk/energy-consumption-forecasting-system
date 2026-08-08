@@ -1,10 +1,10 @@
 # TASK-22 release verification evidence
 
-**Evidence source branch:** `release-readiness`  
-**Evidence source commit:** `6700825ed19ed715c4b43ddb613afcd15852cf1c`  
-**Tested pull-request merge commit:** `582679a3d5f03c512509b9298e9ea60428e900dd`  
-**Pull request:** #22  
-**Verification CI:** run `31245909529`, run #109 — success  
+**Evidence source branch:** `release-readiness`
+**Evidence source commit:** `6700825ed19ed715c4b43ddb613afcd15852cf1c`
+**Tested pull-request merge commit:** `582679a3d5f03c512509b9298e9ea60428e900dd`
+**Pull request:** #22
+**Verification CI:** run `31245909529`, run #109 — success
 **Release Evidence:** run `31245909530`, run #2 — success
 
 This record contains only checks and measurements that were actually executed. The complete UCI source is intentionally not committed; the manual full-dataset profile was therefore **not run** as part of TASK-22, and no final UCI model ranking or weather-benefit result is claimed here.
