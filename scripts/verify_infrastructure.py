@@ -39,6 +39,19 @@ def compose_config(*files: str, env: dict[str, str] | None = None) -> dict[str, 
     return json.loads(run(*args, env=env))
 
 
+def read_env_example() -> dict[str, str]:
+    result: dict[str, str] = {}
+    for raw_line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, separator, value = line.partition("=")
+        if not separator or not key:
+            raise AssertionError(f"Invalid .env.example line: {raw_line!r}")
+        result[key] = value
+    return result
+
+
 def assert_named_volume_only(service: dict[str, Any], service_name: str) -> None:
     for volume in service.get("volumes", []):
         if volume.get("type") == "bind":
@@ -49,6 +62,34 @@ def assert_pinned_image(service_name: str, service: dict[str, Any]) -> None:
     image = service.get("image")
     if not image or ":" not in image or image.endswith(":latest"):
         raise AssertionError(f"{service_name} must use an explicitly tagged image: {image!r}")
+
+
+def assert_environment_example_matches_compose() -> None:
+    values = read_env_example()
+    expected = {
+        "APP_HTTP_PORT": "8080",
+        "POSTGRES_DB": "energyforecast",
+        "POSTGRES_USER": "energyforecast",
+        "POSTGRES_PASSWORD": "energyforecast",
+        "DATABASE_URL": "postgresql+asyncpg://energyforecast:energyforecast@db:5432/energyforecast",
+        "ARTIFACT_ROOT": "/var/lib/energyforecast/artifacts",
+        "WORKER_POLL_INTERVAL_SECONDS": "1",
+        "WORKER_HEARTBEAT_INTERVAL_SECONDS": "5",
+        "WORKER_STALE_AFTER_SECONDS": "30",
+        "WORKER_RECOVERY_BATCH_SIZE": "100",
+        "WORKER_RUN_ONCE": "false",
+    }
+    for key, value in expected.items():
+        if values.get(key) != value:
+            raise AssertionError(f".env.example {key} must be {value!r}, got {values.get(key)!r}")
+
+    cors_origins = {item.strip() for item in values.get("CORS_ORIGINS", "").split(",") if item.strip()}
+    if "http://localhost:8080" not in cors_origins or "http://localhost:5173" not in cors_origins:
+        raise AssertionError(".env.example must document both Compose and direct-Vite local CORS origins")
+
+    stale_job_keys = sorted(key for key in values if key.startswith("JOB_"))
+    if stale_job_keys:
+        raise AssertionError(f".env.example contains obsolete worker setting names: {stale_job_keys}")
 
 
 def main() -> int:
@@ -67,6 +108,8 @@ def main() -> int:
 
     if set(dev["services"]) != EXPECTED_SERVICES or set(prod["services"]) != EXPECTED_SERVICES:
         raise AssertionError("Compose must resolve exactly db, migrate, api, worker, web and nginx")
+
+    assert_environment_example_matches_compose()
 
     for name, service in prod["services"].items():
         assert_pinned_image(name, service)
