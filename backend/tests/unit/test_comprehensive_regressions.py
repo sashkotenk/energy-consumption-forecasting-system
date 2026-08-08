@@ -110,7 +110,10 @@ def test_dst_like_duplicate_local_hour_maps_to_same_instant_for_conflict_detecti
         detected_delimiter=",",
     )
     batch = next(
-        GenericCsvParser(mapping).parse_batches(BytesIO(dst_like_duplicate_hour_csv()), batch_size=10)
+        GenericCsvParser(mapping).parse_batches(
+            BytesIO(dst_like_duplicate_hour_csv()),
+            batch_size=10,
+        )
     )
 
     assert len(batch.measurements) == 3
