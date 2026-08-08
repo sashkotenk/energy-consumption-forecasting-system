@@ -17,11 +17,21 @@ const schema = z.object({
   targetSemantic: z.enum(['energy', 'active_power']),
   unit: z.enum(['kwh', 'wh', 'kw', 'w']),
   timezone: z.string().trim().min(1, 'Вкажіть часовий пояс'),
+  intervalSeconds: z.enum(['auto', '60', '300', '900', '1800', '3600']),
   duplicatePolicy: z.enum(['reject', 'keep_first', 'keep_last', 'mean']),
 })
 
 type FormValues = z.infer<typeof schema>
 const steps = ['Джерело', 'Файл', 'Попередній перегляд', 'Відповідність колонок', 'Одиниці й час', 'Дублікати', 'Підтвердження', 'Виконання']
+
+const intervalLabels: Record<FormValues['intervalSeconds'], string> = {
+  auto: 'Визначити автоматично за часовими мітками',
+  '60': '1 хвилина',
+  '300': '5 хвилин',
+  '900': '15 хвилин',
+  '1800': '30 хвилин',
+  '3600': '1 година',
+}
 
 export function ImportWizardPage() {
   const [params] = useSearchParams()
@@ -29,11 +39,12 @@ export function ImportWizardPage() {
   const [step, setStep] = useState(0)
   const [file, setFile] = useState<File | null>(null)
   const [accepted, setAccepted] = useState<{ importId: string; jobId: string } | null>(null)
-  const { control, register, getValues, formState: { errors }, setError, setValue } = useForm<FormValues>({ defaultValues: { datasetName: 'Новий набір', profile: 'uci', delimiter: ',', timestampColumn: 'timestamp', valueColumn: 'energy_kwh', targetSemantic: 'active_power', unit: 'kw', timezone: 'Europe/Paris', duplicatePolicy: 'reject' } })
+  const { control, register, getValues, formState: { errors }, setError, setValue } = useForm<FormValues>({ defaultValues: { datasetName: 'Новий набір', profile: 'uci', delimiter: ',', timestampColumn: 'timestamp', valueColumn: 'energy_kwh', targetSemantic: 'active_power', unit: 'kw', timezone: 'Europe/Paris', intervalSeconds: 'auto', duplicatePolicy: 'reject' } })
   const profile = useWatch({ control, name: 'profile' })
   const timezone = useWatch({ control, name: 'timezone' })
   const unit = useWatch({ control, name: 'unit' })
   const targetSemantic = useWatch({ control, name: 'targetSemantic' })
+  const intervalSeconds = useWatch({ control, name: 'intervalSeconds' })
   const duplicatePolicy = useWatch({ control, name: 'duplicatePolicy' })
   const job = useJobPolling(accepted?.jobId)
   const importResult = useQuery({ queryKey: ['dataset-import', accepted?.importId], queryFn: () => api.imports.getDatasetImport({ importId: accepted!.importId }), enabled: Boolean(accepted?.importId) && isTerminalJob(job.data?.status) })
@@ -47,6 +58,7 @@ export function ImportWizardPage() {
       setValue('targetSemantic', 'energy')
       setValue('unit', 'kwh')
       setValue('timezone', 'UTC')
+      setValue('intervalSeconds', 'auto')
     }
   }, [profile, setValue])
 
@@ -74,6 +86,7 @@ export function ImportWizardPage() {
         timestampSemantics: 'interval_start',
         timezone: parsed.data.timezone,
         unit: generic ? parsed.data.unit : 'kw',
+        intervalSeconds: generic && parsed.data.intervalSeconds !== 'auto' ? Number(parsed.data.intervalSeconds) : undefined,
       })
       setAccepted({ importId: result.importId, jobId: result.jobId })
       setStep(7)
@@ -93,9 +106,9 @@ export function ImportWizardPage() {
         {step === 1 && <><h2>Файл</h2><label className="file-drop">CSV або TXT<input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span>{preview}</span></label><p className="muted">Файл передається через керований multipart endpoint; шлях до локального сховища не розкривається.</p></>}
         {step === 2 && <><h2>Попередній перегляд</h2><p><strong>{preview}</strong></p><p>Після постановки імпорту backend збереже визначений формат і preview у записі операції. Вміст файлу не інтерпретується браузером як джерело істини.</p></>}
         {step === 3 && <><h2>Відповідність колонок</h2>{profile === 'uci' ? <p>Для UCI застосовується зафіксований профіль Date + Time + Global_active_power; цільова семантика — активна потужність.</p> : <div className="form-grid"><label>Роздільник<input {...register('delimiter')} /></label><label>Часова колонка<input {...register('timestampColumn')} /></label><label>Цільова колонка<input {...register('valueColumn')} /></label><label>Семантика<select {...register('targetSemantic')}><option value="energy">Енергія за інтервал</option><option value="active_power">Середня активна потужність</option></select></label></div>}</>}
-        {step === 4 && <><h2>Одиниці й часовий контекст</h2>{profile === 'uci' ? <div className="form-grid"><label>Одиниця<input value="кВт" readOnly aria-describedby="uci-unit-note" /><small id="uci-unit-note" className="muted">Global_active_power в офіційному UCI-профілі інтерпретується як кВт.</small></label><label>Часовий пояс<input {...register('timezone')} />{errors.timezone && <small className="field-error">{errors.timezone.message}</small>}</label></div> : <div className="form-grid"><label>Одиниця<select {...register('unit')}><option value="kwh">кВт·год</option><option value="wh">Вт·год</option><option value="kw">кВт</option><option value="w">Вт</option></select></label><label>Часовий пояс<input {...register('timezone')} />{errors.timezone && <small className="field-error">{errors.timezone.message}</small>}</label></div>}</>}
+        {step === 4 && <><h2>Одиниці й часовий контекст</h2>{profile === 'uci' ? <div className="form-grid"><label>Одиниця<input value="кВт" readOnly aria-describedby="uci-unit-note" /><small id="uci-unit-note" className="muted">Global_active_power в офіційному UCI-профілі інтерпретується як кВт.</small></label><label>Часовий пояс<input {...register('timezone')} />{errors.timezone && <small className="field-error">{errors.timezone.message}</small>}</label></div> : <><div className="form-grid"><label>Одиниця<select {...register('unit')}><option value="kwh">кВт·год</option><option value="wh">Вт·год</option><option value="kw">кВт</option><option value="w">Вт</option></select></label><label>Часовий пояс<input {...register('timezone')} />{errors.timezone && <small className="field-error">{errors.timezone.message}</small>}</label><label>Крок вимірювань<select {...register('intervalSeconds')}><option value="auto">Визначити автоматично</option><option value="60">1 хвилина</option><option value="300">5 хвилин</option><option value="900">15 хвилин</option><option value="1800">30 хвилин</option><option value="3600">1 година</option></select></label></div><p className="muted">Автовизначення використовує регулярний крок часових міток і враховує пропущені інтервали. Для нерегулярних рядів вкажіть крок явно.</p></>}</>}
         {step === 5 && <><h2>Політика дублікатів</h2><label>Оброблення однакових часових міток<select {...register('duplicatePolicy')}><option value="reject">Відхилити конфлікт</option><option value="keep_first">Залишити перше</option><option value="keep_last">Залишити останнє</option><option value="mean">Середнє значення</option></select></label><p className="muted">Конфліктний дублікат не зникає без явно обраної політики.</p></>}
-        {step === 6 && <><h2>Підтвердження</h2><dl className="details-grid"><div><dt>Профіль</dt><dd>{profile === 'uci' ? 'UCI household power' : 'Користувацький CSV'}</dd></div><div><dt>Файл</dt><dd>{file?.name ?? '—'}</dd></div><div><dt>Ціль</dt><dd>{profile === 'uci' ? 'active_power · kW' : `${targetSemantic} · ${unit}`}</dd></div><div><dt>Часовий пояс</dt><dd>{timezone}</dd></div><div><dt>Дублікати</dt><dd>{duplicatePolicy}</dd></div></dl>{submit.error && <ErrorState error={submit.error} />}<button className="button primary" type="button" onClick={() => submit.mutate()} disabled={submit.isPending}>{submit.isPending ? 'Ставимо в чергу…' : 'Запустити імпорт'}</button></>}
+        {step === 6 && <><h2>Підтвердження</h2><dl className="details-grid"><div><dt>Профіль</dt><dd>{profile === 'uci' ? 'UCI household power' : 'Користувацький CSV'}</dd></div><div><dt>Файл</dt><dd>{file?.name ?? '—'}</dd></div><div><dt>Ціль</dt><dd>{profile === 'uci' ? 'active_power · kW' : `${targetSemantic} · ${unit}`}</dd></div><div><dt>Часовий пояс</dt><dd>{timezone}</dd></div>{profile === 'generic_csv' && <div><dt>Крок вимірювань</dt><dd>{intervalLabels[intervalSeconds]}</dd></div>}<div><dt>Дублікати</dt><dd>{duplicatePolicy}</dd></div></dl>{submit.error && <ErrorState error={submit.error} />}<button className="button primary" type="button" onClick={() => submit.mutate()} disabled={submit.isPending}>{submit.isPending ? 'Ставимо в чергу…' : 'Запустити імпорт'}</button></>}
         {step === 7 && <><h2>Виконання</h2>{accepted ? <><p>Завдання <code>{accepted.jobId}</code></p><p>Стан: <StatusBadge value={job.data?.status ?? 'queued'} /></p>{job.data && <progress max="100" value={job.data.progressPct} aria-label="Прогрес імпорту" />}{job.error && <ErrorState error={job.error} retry={() => void job.refetch()} />}{importResult.data && <div className="success-box"><strong>Імпорт завершено.</strong><p>Сира незмінна версія: <code>{importResult.data.datasetVersionId}</code></p><p className="muted">Наступний крок — перевірити якість і підготувати погодинну версію. Аналіз запускається вже для підготовлених даних.</p><div className="inline-actions"><Link className="button primary" to={`/dataset-versions/${importResult.data.datasetVersionId}/quality`}>Перевірити якість</Link></div></div>}</> : <p>Очікуємо запуск.</p>}</>}
         {step < 6 && <div className="wizard-actions"><button type="button" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>Назад</button><button className="button primary" type="button" onClick={() => canContinue && setStep((value) => Math.min(6, value + 1))} disabled={!canContinue}>Далі</button></div>}
       </section>
