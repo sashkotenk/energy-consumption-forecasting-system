@@ -16,11 +16,18 @@ export DB_PORT="${DB_PORT:-15432}"
 
 compose=(docker compose -p "$project" -f docker-compose.yml -f docker-compose.override.yml)
 cleanup() {
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "Compose smoke failed; dumping service state and logs." >&2
+    "${compose[@]}" ps -a >&2 || true
+    "${compose[@]}" logs --no-color >&2 || true
+  fi
   "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  exit "$status"
 }
 trap cleanup EXIT
 
-cleanup
+"${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" config >/dev/null
 "${compose[@]}" up -d --build --wait --wait-timeout 240
 

@@ -380,7 +380,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Export locked backend production requirements
         working-directory: backend
-        run: uv export --frozen --no-dev --no-hashes --output-file /tmp/backend-requirements.txt
+        run: uv export --frozen --no-dev --no-emit-project --no-hashes --output-file /tmp/backend-requirements.txt
       - name: Audit backend dependencies
         run: uvx --from pip-audit==2.9.0 pip-audit --strict --requirement /tmp/backend-requirements.txt
       - name: Audit frontend dependencies

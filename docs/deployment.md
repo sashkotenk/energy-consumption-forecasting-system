@@ -16,6 +16,9 @@ The supported container baseline is a six-service Docker Compose stack:
 `api` and `worker` do not start until the database is healthy and `migrate` exits successfully. The
 backend network is internal and contains `db`, `migrate`, `api`, and `worker`; the edge network
 contains only `nginx`, `web`, and `api`. The artifact volume is mounted only into the API and worker.
+The development override additionally connects `db` to a host-reachable development network so local
+Alembic and integration commands can use the loopback database port; that network is absent from the
+production-like model.
 
 ## Pinned image/tool baselines
 
@@ -24,7 +27,7 @@ contains only `nginx`, `web`, and `api`. The artifact volume is mounted only int
 | backend build/runtime | `python:3.13.14-slim-bookworm` |
 | uv build tool | `ghcr.io/astral-sh/uv:0.12.2` |
 | frontend build | `node:24.18.0-alpine` |
-| static/edge Nginx | `nginx:1.27.5-alpine` |
+| static/edge Nginx | `nginx:1.30.4-alpine3.24` |
 | database | `timescale/timescaledb:2.28.3-pg17` |
 | OpenAPI generator | `openapitools/openapi-generator-cli:v7.24.0` |
 | secret scan | `zricethezav/gitleaks:v8.24.3` |
@@ -70,7 +73,8 @@ that is deliberately outside the application baseline.
 - application, migration, static-web, and edge containers run with read-only root filesystems;
 - backend and Nginx processes run as non-root users, drop Linux capabilities, and set
   `no-new-privileges`;
-- writable temporary paths use bounded `tmpfs` mounts;
+- writable temporary paths use bounded `tmpfs` mounts and Nginx recreates its temp directories after
+  the tmpfs is mounted;
 - raw uploads, model bundles, and exports live in the named `artifact_data` volume, never the webroot;
 - `/artifacts/` is explicitly denied at the edge; controlled API downloads remain authoritative;
 - the edge request body limit is `300m`, matching the backend `314572800`-byte upload limit;
@@ -121,6 +125,6 @@ Clean-volume runtime smoke on Linux/CI:
 bash scripts/compose-smoke.sh
 ```
 
-The smoke test builds the images, starts a unique project with fresh volumes, waits for health states,
-checks the SPA and proxied readiness endpoint, verifies the one-shot migration exit code, and removes
-the project and volumes afterward.
+The smoke test builds the images, starts a unique Compose project with fresh volumes, waits for health states,
+checks the SPA and `/api/v1/health/ready`, verifies the migration container exit code, and removes
+the project and volumes afterward. On failure it prints service state and container logs before cleanup.

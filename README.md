@@ -38,7 +38,7 @@ exports.
 | Node.js | 24.18.0 LTS |
 | Frontend package manager | npm with committed `package-lock.json` |
 | PostgreSQL / TimescaleDB | PostgreSQL 17 / TimescaleDB 2.28.3 |
-| Nginx runtime | 1.27.5 Alpine |
+| Nginx runtime | 1.30.4 / Alpine 3.24 |
 
 Resolved application/development dependency versions and executed verification evidence are recorded
 in [`docs/implementation-log.md`](docs/implementation-log.md).
