@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   AlgorithmType,
   ExperimentStatus,
+  JobStatus,
+  JobType,
   SensitivityMode,
   WeatherMode,
   type ExperimentResponse,
@@ -110,19 +112,29 @@ describe('TASK-20 component coverage', () => {
     expect(screen.getByText('Конфліктний дублікат не зникає без явно обраної політики.')).toBeInTheDocument()
   })
 
-  it('renders quality counters and submits the fixed transformation policy', async () => {
+  it('explains aggregate missing channels, submits the fixed policy, and opens the hourly version after success', async () => {
+    const now = new Date('2026-08-08T00:00:00Z')
     vi.spyOn(api.datasets, 'getDataQualityReport').mockResolvedValue({
-      createdAt: new Date('2026-08-08T00:00:00Z'),
+      createdAt: now,
       datasetVersionId: 'version-raw',
       engineVersion: 'quality-v1',
-      expectedIntervalSeconds: 60,
-      items: [],
+      expectedIntervalSeconds: 3600,
+      items: [{
+        id: 1,
+        issueType: 'missing',
+        severity: 'warning',
+        columnName: 'voltage_v',
+        occurrenceCount: 3,
+        rangeStart: now,
+        rangeEnd: now,
+        evidence: [],
+      }],
       page: 1,
       pageSize: 100,
       reportId: 'report-1',
       reportVersion: 1,
-      summary: { missing_values: 3, gap_count: 2, exact_duplicates: 1 },
-      total: 0,
+      summary: { missing_values: 3, gap_count: 0, exact_duplicates: 0 },
+      total: 1,
     })
     const transform = vi.spyOn(api.datasets, 'createTransformation').mockResolvedValue({
       jobId: 'job-transform',
@@ -131,18 +143,42 @@ describe('TASK-20 component coverage', () => {
       targetVersionId: 'version-hourly',
       status: 'queued',
     })
+    vi.spyOn(api.jobs, 'getJob').mockResolvedValue({
+      attempt: 1,
+      attempts: [],
+      cancelRequestedAt: null,
+      createdAt: now,
+      errorCode: null,
+      errorDetail: null,
+      finishedAt: now,
+      heartbeatAt: now,
+      id: 'job-transform',
+      jobType: JobType.DataTransformation,
+      maxAttempts: 3,
+      progressPct: 100,
+      result: { target_version_id: 'version-hourly' },
+      startedAt: now,
+      status: JobStatus.Succeeded,
+      updatedAt: now,
+    })
 
-    renderRoute(
-      '/dataset-versions/version-raw/quality',
-      '/dataset-versions/:versionId/quality',
-      <DataQualityPage />,
+    render(
+      <QueryClientProvider client={queryClient()}>
+        <MemoryRouter initialEntries={['/dataset-versions/version-raw/quality']}>
+          <Routes>
+            <Route path="/dataset-versions/:versionId/quality" element={<DataQualityPage />} />
+            <Route path="/dataset-versions/:versionId/analysis" element={<h1>Аналіз погодинної версії</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     )
 
     expect(await screen.findByRole('heading', { name: 'Якість даних' })).toBeInTheDocument()
     const metrics = screen.getByRole('region', { name: 'Показники якості' })
+    expect(within(metrics).getByText('Пропуски (усі канали)')).toBeInTheDocument()
     expect(within(metrics).getByText('3')).toBeInTheDocument()
-    expect(within(metrics).getByText('2')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Створити погодинну версію' }))
+    expect(screen.getByText(/необов’язкові електричні канали/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Підготувати погодинну версію' }))
 
     await waitFor(() => expect(transform).toHaveBeenCalledWith({
       versionId: 'version-raw',
@@ -152,7 +188,7 @@ describe('TASK-20 component coverage', () => {
         shortGapLimitMinutes: 5,
       },
     }))
-    expect(await screen.findByRole('status')).toHaveTextContent('job-transform')
+    expect(await screen.findByRole('heading', { name: 'Аналіз погодинної версії' })).toBeInTheDocument()
   })
 
   it('renders the generated-contract model metrics table with baseline and recommendation', async () => {

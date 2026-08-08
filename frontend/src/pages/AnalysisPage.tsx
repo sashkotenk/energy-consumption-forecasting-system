@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { EChartsOption } from 'echarts'
 import { useMemo } from 'react'
-import { useParams, useSearchParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { SeriesResolution } from '../generated/api/models'
 import { api } from '../shared/api/client'
 import { EChart } from '../shared/ui/EChart'
@@ -36,7 +36,7 @@ export function AnalysisPage() {
 
   return (
     <>
-      <PageHeader title="Аналіз споживання" description="Часова поведінка, добова й тижнева сезонність, теплова карта та розподіл значень." />
+      <PageHeader title="Аналіз споживання" description="Часова поведінка, добова й тижнева сезонність, теплова карта та розподіл значень." actions={versionId ? <Link className="button primary" to={`/experiments/new?datasetVersionId=${encodeURIComponent(versionId)}`}>Новий експеримент</Link> : undefined} />
       <form className="filter-bar" onSubmit={(event) => event.preventDefault()}><label>Від<input type="date" value={fromText} onChange={(event) => setParams({ from: event.target.value, to: toText })} /></label><label>До<input type="date" value={toText} onChange={(event) => setParams({ from: fromText, to: event.target.value })} /></label><span>Версія <code>{versionId}</code></span></form>
       {!enabled ? <EmptyState title="Некоректний період"><p>Оберіть дату завершення пізніше дати початку.</p></EmptyState> : loading ? <LoadingState label="Обчислюємо аналітичні зрізи…" /> : error ? <ErrorState error={error} retry={() => queries.forEach((query) => void query.refetch())} /> : !series.data?.points.length ? <EmptyState title="Немає даних у вибраному періоді"><p>Змініть межі періоду або перевірте якість версії.</p></EmptyState> : <>
         <section className="metric-grid" aria-label="Описова статистика">{Object.entries(summary.data ?? {}).filter(([, value]) => typeof value === 'number').slice(0, 4).map(([key, value]) => <article className="metric-card" key={key}><span>{key}</span><strong>{Number(value).toFixed(2)}</strong><small>показник вибраного періоду</small></article>)}</section>

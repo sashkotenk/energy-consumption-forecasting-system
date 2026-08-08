@@ -57,6 +57,15 @@ async function installSyntheticApi(page: Page) {
         target_version_id: HOURLY_VERSION, status: 'queued',
       }, 202)
     }
+    if (method === 'GET' && path === '/jobs/job-transform') {
+      return json(route, {
+        id: 'job-transform', job_type: 'data_transformation', status: 'succeeded', priority: 0,
+        payload: {}, result: { target_version_id: HOURLY_VERSION }, progress_pct: 100,
+        attempt: 1, max_attempts: 3, error_code: null, error_detail: null,
+        cancel_requested_at: null, created_at: NOW, updated_at: NOW, started_at: NOW,
+        heartbeat_at: NOW, finished_at: NOW, attempts: [],
+      })
+    }
     if (method === 'GET' && path === `/dataset-versions/${HOURLY_VERSION}/analytics/summary`) {
       return json(route, {
         dataset_version_id: HOURLY_VERSION, from: '2009-01-01T00:00:00Z', to: '2009-02-01T00:00:00Z',
@@ -171,10 +180,8 @@ test('synthetic primary flow covers import through controlled forecast export', 
 
   await page.getByRole('link', { name: 'Перевірити якість' }).click()
   await expect(page.getByRole('heading', { name: 'Якість даних' })).toBeVisible()
-  await page.getByRole('button', { name: 'Створити погодинну версію' }).click()
-  await expect(page.getByRole('status')).toContainText('job-transform')
-
-  await page.goto(`/dataset-versions/${HOURLY_VERSION}/analysis`)
+  await page.getByRole('button', { name: 'Підготувати погодинну версію' }).click()
+  await expect(page).toHaveURL(new RegExp(`/dataset-versions/${HOURLY_VERSION}/analysis`))
   await expect(page.getByRole('heading', { name: 'Аналіз споживання' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Графік погодинного споживання' })).toBeVisible()
 
