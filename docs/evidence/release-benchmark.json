@@ -1,0 +1,59 @@
+{
+  "dataset": {
+    "kind": "deterministic synthetic",
+    "note": "The full UCI profile is a separate external-source check.",
+    "uci_in_repository": false
+  },
+  "generated_at": "2026-08-08T07:19:58.913228+00:00",
+  "measurements": {
+    "analytics_bucket_selection": {
+      "median_ms": 0.001562,
+      "p95_ms": 0.001673,
+      "repetitions": 1000
+    },
+    "api_liveness": {
+      "median_ms": 1.355032,
+      "p95_ms": 1.523044,
+      "repetitions": 100
+    },
+    "parser_50k_rows": {
+      "median_ms": 772.274191,
+      "median_rows_per_second": 64743.84,
+      "p95_ms": 772.623827,
+      "repetitions": 3,
+      "rows": 50000
+    },
+    "quality_10k_rows": {
+      "median_ms": 49.002625,
+      "p95_ms": 174.3322,
+      "repetitions": 3
+    },
+    "ridge_direct_24": {
+      "artifact_size_bytes": 2183,
+      "feature_count": 5,
+      "horizon": 24,
+      "prediction_ms_median": 2.961151,
+      "prediction_ms_p95": 3.357788,
+      "prediction_repetitions": 30,
+      "train_seconds_median": 0.016361,
+      "training_repetitions": 3,
+      "training_rows": 96
+    },
+    "transformation_24h_minutes": {
+      "median_ms": 6.857282,
+      "p95_ms": 6.92434,
+      "repetitions": 5
+    }
+  },
+  "profile": {
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "logical_cpus": 4,
+    "memory_bytes": 16766423040,
+    "parallelism": "benchmark ML profile uses n_jobs=1",
+    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
+    "python": "3.13.14",
+    "random_seed": 42
+  },
+  "release_commit": "582679a3d5f03c512509b9298e9ea60428e900dd",
+  "schema": "energyforecast-release-benchmark/v1"
+}
