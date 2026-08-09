@@ -126,7 +126,7 @@ jobs:
       - name: Execute final chronological ML campaign
         working-directory: backend
         run: >-
-          uv run --frozen python ../scripts/run_point5_campaign.py
+          uv run --frozen python ../scripts/run_point5_campaign_fast.py
           --database-url "$DATABASE_URL"
           --artifact-root ../point5-work/artifact-store
           --preparation-json ../point5-work/dataset-preparation.json
@@ -136,6 +136,7 @@ jobs:
           --output-dir ../point5-work/evidence
           --release-candidate-sha "$GITHUB_SHA"
           --max-tree-candidates 4
+          --fit-jobs 4
 
       - name: Verify required Point-5 evidence outputs
         run: |
