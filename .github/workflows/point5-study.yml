@@ -136,7 +136,7 @@ jobs:
           --output-dir ../point5-work/evidence
           --release-candidate-sha "$GITHUB_SHA"
           --max-tree-candidates 4
-          --fit-jobs 4
+          --fit-jobs 2
 
       - name: Verify required Point-5 evidence outputs
         run: |
