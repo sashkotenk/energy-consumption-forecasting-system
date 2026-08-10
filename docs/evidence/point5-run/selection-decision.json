@@ -1,0 +1,54 @@
+{
+  "candidate_summary": [
+    {
+      "algorithm": "seasonal_naive_24",
+      "experiment_id": "E00",
+      "mean_cv_mae": 0.5953974339887705,
+      "predict_ms_median": 0.3179035750742044,
+      "std_cv_mae": 0.10785397706237801
+    },
+    {
+      "algorithm": "ridge",
+      "experiment_id": "E10",
+      "mean_cv_mae": 0.5403146326825349,
+      "predict_ms_median": 0.002309743762266006,
+      "std_cv_mae": 0.07812126075781495
+    },
+    {
+      "algorithm": "random_forest",
+      "experiment_id": "E11",
+      "mean_cv_mae": 0.45628053745008795,
+      "predict_ms_median": 0.7307897189163116,
+      "std_cv_mae": 0.056814664461087946
+    },
+    {
+      "algorithm": "hist_gradient_boosting",
+      "experiment_id": "E12",
+      "mean_cv_mae": 0.4574977664997218,
+      "predict_ms_median": 0.18068651330846774,
+      "std_cv_mae": 0.06119109411567047
+    }
+  ],
+  "dataset_sha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7",
+  "final_test_accessed_when_written": false,
+  "mean_cv_mae": 0.45628053745008795,
+  "persisted_at": "2026-08-10T05:34:07.991007+00:00",
+  "predict_ms_median": 0.7307897189163116,
+  "prepared_dataset_version_id": "69db3a8a-4163-4bdf-a435-4a72eafc148d",
+  "release_candidate_sha": "35a4a3afe013dbe0d1098d3723a2f20047f163f4",
+  "schema": "energyforecast-point5-selection/v1",
+  "selected_algorithm": "random_forest",
+  "selected_experiment_id": "E11",
+  "selected_parameters": {
+    "bootstrap": true,
+    "max_depth": 12,
+    "max_features": 0.7,
+    "max_samples": 0.8,
+    "min_samples_leaf": 1,
+    "n_estimators": 300,
+    "random_state": 42
+  },
+  "selection_rule": "cv-mae-1pct-std-5pct-time-simplicity/v1",
+  "split_definition": "uci_2009_quarters_2010_test_v1",
+  "std_cv_mae": 0.056814664461087946
+}

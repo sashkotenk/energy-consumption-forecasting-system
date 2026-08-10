@@ -1,0 +1,76 @@
+{
+  "coverage": {
+    "hours_100pct": 34081,
+    "hours_gte_80pct": 34146,
+    "hours_gte_90pct": 34139,
+    "mean": 0.9873273776826931,
+    "minimum": 0.0
+  },
+  "dataset_id": "783f3530-4329-42ba-9881-a812a5d3798a",
+  "energy_non_null_hours": 34164,
+  "hourly_end": "2010-11-26T20:00:00+00:00",
+  "hourly_rows": 34589,
+  "hourly_start": "2006-12-16T16:00:00+00:00",
+  "import_id": "33cae491-c3d0-4536-b010-e5ebef4b027f",
+  "import_job_id": "1318668c-8edc-4fd4-ac93-dbdbd8b393dc",
+  "import_report": {
+    "batch_size": 10000,
+    "invalid_or_skipped_rows": 0,
+    "missing_tokens_preserved_as_null": true,
+    "parse_issue_count": 0,
+    "profile": "uci",
+    "schema_version": "dataset-import-report/v1",
+    "source_rows": 2075259,
+    "stored_rows": 2075259,
+    "valid_rows": 2075259
+  },
+  "prepared_dataset_version_id": "69db3a8a-4163-4bdf-a435-4a72eafc148d",
+  "quality_policy": {
+    "engine_version": "quality-engine/v1",
+    "report_id": "c43a5474-8fb8-468f-957d-74905021fc7b",
+    "report_version": 1
+  },
+  "quality_status_counts": {
+    "complete": 34077,
+    "imputed_short_gap": 54,
+    "invalid_conflict": 4,
+    "invalid_missing": 450,
+    "valid_partial": 4
+  },
+  "raw_dataset_version_id": "e0e16d0c-bf47-4faa-b96d-0494a4104157",
+  "schema": "energyforecast-point5-dataset-preparation/v1",
+  "source_bytes": 132960755,
+  "source_filename": "household_power_consumption.txt",
+  "source_sha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7",
+  "transformation_manifest": {
+    "policy": {
+      "duplicate_policy": "reject",
+      "minimum_hour_coverage": 0.9,
+      "short_gap_limit_minutes": 5
+    },
+    "run_id": "06bdfa94-03d1-41cd-9531-a9648a6d6a40",
+    "schema_version": "transformation-manifest/v1",
+    "source_version_id": "e0e16d0c-bf47-4faa-b96d-0494a4104157",
+    "summary": {
+      "energy_is_never_coverage_scaled": true,
+      "engine_version": "hourly-transform/v1",
+      "hour_count": 34589,
+      "interval_seconds": 60,
+      "schema_version": "transformation-summary/v1",
+      "source_semantic": "active_power",
+      "status_counts": {
+        "complete": 34077,
+        "imputed_short_gap": 54,
+        "invalid_conflict": 4,
+        "invalid_missing": 450,
+        "valid_partial": 4
+      },
+      "training_ready_hours": 34131
+    }
+  },
+  "transformation_policy": {
+    "duplicate_policy": "reject",
+    "minimum_hour_coverage": 0.9,
+    "short_gap_limit_minutes": 5
+  }
+}

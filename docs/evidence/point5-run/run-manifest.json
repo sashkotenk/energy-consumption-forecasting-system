@@ -1,0 +1,283 @@
+{
+  "dataset": {
+    "hourly_rows": 34589,
+    "prepared_dataset_version_id": "69db3a8a-4163-4bdf-a435-4a72eafc148d",
+    "quality_status_counts": {
+      "complete": 34077,
+      "imputed_short_gap": 54,
+      "invalid_conflict": 4,
+      "invalid_missing": 450,
+      "valid_partial": 4
+    },
+    "source_sha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7"
+  },
+  "environment": {
+    "logical_cpus": 4,
+    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.13.14"
+  },
+  "final_test": {
+    "baseline_mae": 0.5550390493350493,
+    "bootstrap": {
+      "block_size_origins": 168,
+      "ci95_lower": -0.14203907777321118,
+      "ci95_upper": -0.08357782941805872,
+      "loss": "per-origin_mean_absolute_error",
+      "method": "paired_moving_block_bootstrap",
+      "observed_mae_difference_candidate_minus_baseline": -0.11604288685760988,
+      "random_seed": 42,
+      "repeats": 2000,
+      "stable_improvement": true
+    },
+    "h1_supported_for_preselected_w0_candidate": true,
+    "improvement_percent_vs_seasonal_naive_24": 20.90715725256306,
+    "origins": 6475,
+    "selected_mae": 0.4389961624774395,
+    "selected_rmse": 0.6026435511157734,
+    "selected_smape": 44.025417277052384
+  },
+  "generated_at": "2026-08-10T07:48:59.647064+00:00",
+  "github_run_id": "31348606881",
+  "library_versions": {
+    "asyncpg": "0.31.0",
+    "joblib": "1.5.3",
+    "numpy": "2.4.6",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "sqlalchemy": "2.0.51"
+  },
+  "product_integration": {
+    "algorithm": "random_forest",
+    "model_bundle_artifact_id": "25ed1785-2a05-4ffa-9583-2048b05d0a3c",
+    "model_bundle_sha256": "1df88895054f8ff477eb9f9aa70ae6656a1231a49f600c3825fa862f678fd551",
+    "model_bundle_size_bytes": 501502752,
+    "origin": "2010-11-26T19:00:00+00:00",
+    "points": [
+      {
+        "horizon": 1,
+        "predicted_energy_kwh": 1.9377439318151297,
+        "target_time": "2010-11-26T20:00:00+00:00"
+      },
+      {
+        "horizon": 2,
+        "predicted_energy_kwh": 1.437779601977957,
+        "target_time": "2010-11-26T21:00:00+00:00"
+      },
+      {
+        "horizon": 3,
+        "predicted_energy_kwh": 0.7048860318329478,
+        "target_time": "2010-11-26T22:00:00+00:00"
+      },
+      {
+        "horizon": 4,
+        "predicted_energy_kwh": 0.47824292912798927,
+        "target_time": "2010-11-26T23:00:00+00:00"
+      },
+      {
+        "horizon": 5,
+        "predicted_energy_kwh": 0.4323568814057013,
+        "target_time": "2010-11-27T00:00:00+00:00"
+      },
+      {
+        "horizon": 6,
+        "predicted_energy_kwh": 0.4138166564316496,
+        "target_time": "2010-11-27T01:00:00+00:00"
+      },
+      {
+        "horizon": 7,
+        "predicted_energy_kwh": 0.41860431451101787,
+        "target_time": "2010-11-27T02:00:00+00:00"
+      },
+      {
+        "horizon": 8,
+        "predicted_energy_kwh": 0.43539774726292535,
+        "target_time": "2010-11-27T03:00:00+00:00"
+      },
+      {
+        "horizon": 9,
+        "predicted_energy_kwh": 0.43979250347472915,
+        "target_time": "2010-11-27T04:00:00+00:00"
+      },
+      {
+        "horizon": 10,
+        "predicted_energy_kwh": 0.5746735064099519,
+        "target_time": "2010-11-27T05:00:00+00:00"
+      },
+      {
+        "horizon": 11,
+        "predicted_energy_kwh": 1.7877069347796892,
+        "target_time": "2010-11-27T06:00:00+00:00"
+      },
+      {
+        "horizon": 12,
+        "predicted_energy_kwh": 1.7947910792487216,
+        "target_time": "2010-11-27T07:00:00+00:00"
+      },
+      {
+        "horizon": 13,
+        "predicted_energy_kwh": 1.554867279477559,
+        "target_time": "2010-11-27T08:00:00+00:00"
+      },
+      {
+        "horizon": 14,
+        "predicted_energy_kwh": 1.5257799818023763,
+        "target_time": "2010-11-27T09:00:00+00:00"
+      },
+      {
+        "horizon": 15,
+        "predicted_energy_kwh": 1.542184645980672,
+        "target_time": "2010-11-27T10:00:00+00:00"
+      },
+      {
+        "horizon": 16,
+        "predicted_energy_kwh": 1.5217700662456586,
+        "target_time": "2010-11-27T11:00:00+00:00"
+      },
+      {
+        "horizon": 17,
+        "predicted_energy_kwh": 1.34468952343669,
+        "target_time": "2010-11-27T12:00:00+00:00"
+      },
+      {
+        "horizon": 18,
+        "predicted_energy_kwh": 1.3899071687436333,
+        "target_time": "2010-11-27T13:00:00+00:00"
+      },
+      {
+        "horizon": 19,
+        "predicted_energy_kwh": 1.4332037992105915,
+        "target_time": "2010-11-27T14:00:00+00:00"
+      },
+      {
+        "horizon": 20,
+        "predicted_energy_kwh": 1.554917045730189,
+        "target_time": "2010-11-27T15:00:00+00:00"
+      },
+      {
+        "horizon": 21,
+        "predicted_energy_kwh": 1.5834107101354957,
+        "target_time": "2010-11-27T16:00:00+00:00"
+      },
+      {
+        "horizon": 22,
+        "predicted_energy_kwh": 2.134953006025369,
+        "target_time": "2010-11-27T17:00:00+00:00"
+      },
+      {
+        "horizon": 23,
+        "predicted_energy_kwh": 2.453332574055765,
+        "target_time": "2010-11-27T18:00:00+00:00"
+      },
+      {
+        "horizon": 24,
+        "predicted_energy_kwh": 2.577830447929708,
+        "target_time": "2010-11-27T19:00:00+00:00"
+      }
+    ],
+    "schema": "energyforecast-point5-product-forecast/v1",
+    "total_energy_kwh": 31.472638367052117
+  },
+  "protocol": {
+    "cv_fit_parallelism": {
+      "backend": "shared-memory threads",
+      "effective_jobs": 2,
+      "final_benchmark_profile": "unchanged single-thread 3 measured training runs",
+      "prediction_timing_profile": "single-thread benchmark",
+      "requested_jobs": 2,
+      "scientific_invariants": [
+        "candidate configurations unchanged",
+        "chronological folds and 24-hour purge unchanged",
+        "random seed 42 unchanged",
+        "targets, metrics and selection rule unchanged",
+        "selection persisted before final-test access"
+      ],
+      "scope": "independent 24 direct horizons during CV and W1 final ablation only"
+    },
+    "final_test_start": "2010-01-01T00:00:00+00:00",
+    "forecast_horizon_hours": 24,
+    "max_tree_candidates_per_algorithm": 4,
+    "random_seed": 42,
+    "selection_file_sha256": "506141087a3b881ae45159f526680479b2935c5424f04a17a1e6ef1cda6c6b98",
+    "selection_persisted_before_final_test": true,
+    "split_definition": "uci_2009_quarters_2010_test_v1",
+    "w1_semantics": "idealized future ERA5-Land reanalysis at t+h"
+  },
+  "release_candidate_sha": "35a4a3afe013dbe0d1098d3723a2f20047f163f4",
+  "schema": "energyforecast-point5-results/v1",
+  "selection": {
+    "candidate_summary": [
+      {
+        "algorithm": "seasonal_naive_24",
+        "experiment_id": "E00",
+        "mean_cv_mae": 0.5953974339887705,
+        "predict_ms_median": 0.3179035750742044,
+        "std_cv_mae": 0.10785397706237801
+      },
+      {
+        "algorithm": "ridge",
+        "experiment_id": "E10",
+        "mean_cv_mae": 0.5403146326825349,
+        "predict_ms_median": 0.002309743762266006,
+        "std_cv_mae": 0.07812126075781495
+      },
+      {
+        "algorithm": "random_forest",
+        "experiment_id": "E11",
+        "mean_cv_mae": 0.45628053745008795,
+        "predict_ms_median": 0.7307897189163116,
+        "std_cv_mae": 0.056814664461087946
+      },
+      {
+        "algorithm": "hist_gradient_boosting",
+        "experiment_id": "E12",
+        "mean_cv_mae": 0.4574977664997218,
+        "predict_ms_median": 0.18068651330846774,
+        "std_cv_mae": 0.06119109411567047
+      }
+    ],
+    "dataset_sha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7",
+    "final_test_accessed_when_written": false,
+    "mean_cv_mae": 0.45628053745008795,
+    "persisted_at": "2026-08-10T05:34:07.991007+00:00",
+    "predict_ms_median": 0.7307897189163116,
+    "prepared_dataset_version_id": "69db3a8a-4163-4bdf-a435-4a72eafc148d",
+    "release_candidate_sha": "35a4a3afe013dbe0d1098d3723a2f20047f163f4",
+    "schema": "energyforecast-point5-selection/v1",
+    "selected_algorithm": "random_forest",
+    "selected_experiment_id": "E11",
+    "selected_parameters": {
+      "bootstrap": true,
+      "max_depth": 12,
+      "max_features": 0.7,
+      "max_samples": 0.8,
+      "min_samples_leaf": 1,
+      "n_estimators": 300,
+      "random_state": 42
+    },
+    "selection_rule": "cv-mae-1pct-std-5pct-time-simplicity/v1",
+    "split_definition": "uci_2009_quarters_2010_test_v1",
+    "std_cv_mae": 0.056814664461087946
+  },
+  "weather": {
+    "csv_sha256": "5e39da079291bd08b25c6be0b1e113f084bf08192136076fa616d182a00c25ed",
+    "location": {
+      "coordinate_semantics": "approximate city centre; exact UCI household coordinates are unpublished",
+      "geocoding_source": "GeoNames Sceaux populated-place centre",
+      "geocoding_source_url": "https://www.geonames.org/search.html?country=FR&q=Sceaux",
+      "latitude": 48.776442,
+      "longitude": 2.290258,
+      "name": "Sceaux, Hauts-de-Seine, France"
+    },
+    "operational_forecast_claim": false,
+    "provider": "Open-Meteo Historical Weather API",
+    "reanalysis_model": "ERA5-Land + ERA5 forcing"
+  },
+  "weather_ablation_final": {
+    "algorithm_family": "random_forest",
+    "interpretation": "idealized upper-bound reanalysis ablation only",
+    "w0_mae": 0.4389961624774395,
+    "w0_minus_w1_mae": -0.0005661625077562626,
+    "w1_mae": 0.43956232498519576
+  }
+}
