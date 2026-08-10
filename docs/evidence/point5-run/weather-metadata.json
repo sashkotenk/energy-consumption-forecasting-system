@@ -1,0 +1,88 @@
+{
+  "api_endpoint": "https://archive-api.open-meteo.com/v1/archive",
+  "csv_sha256": "5e39da079291bd08b25c6be0b1e113f084bf08192136076fa616d182a00c25ed",
+  "derived_variables": {
+    "apparent_temperature": {
+      "formula": "AT = Ta + 0.33*e - 0.70*ws - 4.00; e = RH/100*6.105*exp(17.27*Ta/(237.7+Ta))",
+      "formula_wind_unit": "m/s",
+      "input_wind_unit": "km/h",
+      "method": "Steadman non-radiative apparent temperature",
+      "reason": "derive one complete, deterministic definition for all hours rather than interpolate missing convenience values",
+      "reference": "https://doi.org/10.1371/journal.pone.0025101",
+      "relative_humidity_unit": "percent",
+      "solar_radiation_included": false,
+      "temperature_unit": "degC"
+    }
+  },
+  "documentation": "https://open-meteo.com/en/docs/historical-weather-api",
+  "first_timestamp": "2006-12-16T00:00",
+  "hourly_rows": 34656,
+  "hourly_variables": [
+    "temperature_2m",
+    "relative_humidity_2m",
+    "apparent_temperature",
+    "precipitation",
+    "wind_speed_10m"
+  ],
+  "last_timestamp": "2010-11-28T23:00",
+  "operational_forecast_claim": false,
+  "provider": "Open-Meteo Historical Weather API",
+  "reanalysis_model": "ERA5-Land + ERA5 forcing",
+  "request_parameters": {
+    "era5": {
+      "cell_selection": "land",
+      "end_date": "2010-11-28",
+      "hourly": "precipitation,wind_speed_10m",
+      "latitude": "48.776442",
+      "longitude": "2.290258",
+      "models": "era5",
+      "start_date": "2006-12-16",
+      "timezone": "UTC"
+    },
+    "era5_land": {
+      "cell_selection": "land",
+      "end_date": "2010-11-28",
+      "hourly": "temperature_2m,relative_humidity_2m",
+      "latitude": "48.776442",
+      "longitude": "2.290258",
+      "models": "era5_land",
+      "start_date": "2006-12-16",
+      "timezone": "UTC"
+    }
+  },
+  "requested_location": {
+    "coordinate_semantics": "approximate city centre; exact UCI household coordinates are unpublished",
+    "geocoding_source": "GeoNames Sceaux populated-place centre",
+    "geocoding_source_url": "https://www.geonames.org/search.html?country=FR&q=Sceaux",
+    "latitude": 48.776442,
+    "longitude": 2.290258,
+    "name": "Sceaux, Hauts-de-Seine, France"
+  },
+  "research_mode": "W1_idealized_reanalysis",
+  "returned_grid": {
+    "era5": {
+      "elevation": 94.0,
+      "latitude": 48.75,
+      "longitude": 2.25,
+      "timezone": "GMT",
+      "utc_offset_seconds": 0
+    },
+    "era5_land": {
+      "elevation": 94.0,
+      "latitude": 48.800003,
+      "longitude": 2.300003,
+      "timezone": "GMT",
+      "utc_offset_seconds": 0
+    }
+  },
+  "schema": "energyforecast-point5-weather/v2",
+  "source_rationale": "Open-Meteo documents ERA5-Land precipitation and wind as ERA5 forcing variables; they are fetched explicitly from ERA5 to avoid missing convenience fields while preserving the documented data lineage.",
+  "source_variable_mapping": {
+    "apparent_temperature": "derived from ERA5-Land temperature/humidity and ERA5 wind",
+    "precipitation": "ERA5 forcing",
+    "relative_humidity_2m": "ERA5-Land",
+    "temperature_2m": "ERA5-Land",
+    "wind_speed_10m": "ERA5 forcing"
+  },
+  "weather_missing_value_policy": "fail_on_missing_source_variable; no interpolation"
+}

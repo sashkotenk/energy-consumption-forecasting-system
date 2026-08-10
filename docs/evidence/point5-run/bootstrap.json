@@ -1,0 +1,11 @@
+{
+  "block_size_origins": 168,
+  "ci95_lower": -0.14203907777321118,
+  "ci95_upper": -0.08357782941805872,
+  "loss": "per-origin_mean_absolute_error",
+  "method": "paired_moving_block_bootstrap",
+  "observed_mae_difference_candidate_minus_baseline": -0.11604288685760988,
+  "random_seed": 42,
+  "repeats": 2000,
+  "stable_improvement": true
+}

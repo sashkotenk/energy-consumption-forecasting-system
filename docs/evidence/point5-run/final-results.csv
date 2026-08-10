@@ -1,0 +1,12 @@
+experiment_id,algorithm,weather_mode,quality_profile,feature_schema_version,split_definition,mean_cv_mae,std_cv_mae,final_mae,final_rmse,final_smape,train_time_seconds,prediction_median_ms,prediction_p95_ms,artifact_size_bytes,recommended,notes
+E00,seasonal_naive_24,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.5953974339887705,0.10785397706237801,0.5550390493350493,0.8217770390945537,50.11932479379503,0.0,0.3179035750742044,,,false,
+E01,seasonal_naive_168,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.5558825505598578,0.08526344467907455,,,,0.0,0.3203627226364397,,,false,
+E10,ridge,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.5403146326825349,0.07812126075781495,,,,0.10041579800002864,0.002309743762266006,,,false,
+E11,random_forest,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.45628053745008795,0.056814664461087946,0.4389961624774395,0.6026435511157734,44.025417277052384,1102.2314343919988,392.551528997501,411.77661209967476,505263668,true,selected before final test
+E12,hist_gradient_boosting,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.4574977664997218,0.06119109411567047,,,,9.990358720499898,0.18068651330846774,,,false,
+E20,ridge,W1,main_90_complete_or_imputed,base_v1+era5_land_horizon_v1,uci_2009_quarters_2010_test_v1,0.5351980856276883,0.07900200987288236,,,,0.1541067835000831,0.0059245533267064596,,,false,W1 idealized reanalysis
+E21,random_forest,W1,main_90_complete_or_imputed,base_v1+era5_land_horizon_v1,uci_2009_quarters_2010_test_v1,0.4586026348989318,0.05846053388621429,0.43956232498519576,0.6007548939247385,44.12965908475416,516.3699381195001,0.7459776484284033,,,false,W1 idealized reanalysis
+E22,hist_gradient_boosting,W1,main_90_complete_or_imputed,base_v1+era5_land_horizon_v1,uci_2009_quarters_2010_test_v1,0.45673436392620587,0.06329275925042409,,,,11.05943699800082,0.1862713274310479,,,false,W1 idealized reanalysis
+E30,random_forest,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.4600331385180951,0.060700605406658836,,,,281.79095272549785,0.9075854746999177,,,false,
+E31,random_forest,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.4563292301406981,0.05665407553211494,,,,431.5315821424974,0.7525106164352685,,,false,
+E32,random_forest,W0,main_90_complete_or_imputed,base_v1,uci_2009_quarters_2010_test_v1,0.45628053745008795,0.056814664461087946,,,,426.0371041320002,0.7307897189163116,,,false,

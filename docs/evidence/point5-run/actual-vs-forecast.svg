@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+<rect width="100%" height="100%" fill="white"/>
+<text x="480.0" y="32" text-anchor="middle" font-family="sans-serif" font-size="22">Actual vs forecast at 2010-01-01T00:00:00+00:00</text>
+<line x1="80" y1="60" x2="80" y2="470" stroke="#222"/>
+<line x1="80" y1="470" x2="930" y2="470" stroke="#222"/>
+<text x="20" y="265.0" transform="rotate(-90 20 265.0)" font-family="sans-serif" font-size="14">Energy, kWh</text>
+<line x1="80" y1="470.0" x2="930" y2="470.0" stroke="#ddd"/>
+<text x="70" y="475.0" text-anchor="end" font-family="sans-serif" font-size="12">0.000</text>
+<line x1="80" y1="388.0" x2="930" y2="388.0" stroke="#ddd"/>
+<text x="70" y="393.0" text-anchor="end" font-family="sans-serif" font-size="12">0.613</text>
+<line x1="80" y1="306.0" x2="930" y2="306.0" stroke="#ddd"/>
+<text x="70" y="311.0" text-anchor="end" font-family="sans-serif" font-size="12">1.225</text>
+<line x1="80" y1="224.0" x2="930" y2="224.0" stroke="#ddd"/>
+<text x="70" y="229.0" text-anchor="end" font-family="sans-serif" font-size="12">1.838</text>
+<line x1="80" y1="142.0" x2="930" y2="142.0" stroke="#ddd"/>
+<text x="70" y="147.0" text-anchor="end" font-family="sans-serif" font-size="12">2.450</text>
+<line x1="80" y1="60.0" x2="930" y2="60.0" stroke="#ddd"/>
+<text x="70" y="65.0" text-anchor="end" font-family="sans-serif" font-size="12">3.063</text>
+<polyline fill="none" stroke="#1f77b4" stroke-width="2.5" points="80.0,385.1 117.0,382.6 153.9,383.5 190.9,385.9 227.8,388.2 264.8,388.0 301.7,381.6 338.7,388.9 375.7,273.0 412.6,358.3 449.6,388.8 486.5,302.4 523.5,208.1 560.4,369.3 597.4,95.1 634.3,314.4 671.3,404.0 708.3,415.5 745.2,412.1 782.2,409.1 819.1,416.1 856.1,391.2 893.0,311.6 930.0,429.3"/>
+<line x1="80" y1="515" x2="108" y2="515" stroke="#1f77b4" stroke-width="3"/>
+<text x="115" y="520" font-family="sans-serif" font-size="13">Actual</text>
+<polyline fill="none" stroke="#d62728" stroke-width="2.5" points="80.0,409.3 117.0,409.3 153.9,412.1 190.9,411.3 227.8,333.0 264.8,196.5 301.7,204.4 338.7,257.0 375.7,270.9 412.6,271.4 449.6,276.2 486.5,262.1 523.5,279.9 560.4,282.5 597.4,271.4 634.3,313.0 671.3,255.6 708.3,212.6 745.2,190.0 782.2,152.1 819.1,266.4 856.1,313.8 893.0,384.3 930.0,379.7"/>
+<line x1="290" y1="515" x2="318" y2="515" stroke="#d62728" stroke-width="3"/>
+<text x="325" y="520" font-family="sans-serif" font-size="13">Selected W0</text>
+<polyline fill="none" stroke="#2ca02c" stroke-width="2.5" points="80.0,421.3 117.0,421.3 153.9,427.2 190.9,341.7 227.8,412.8 264.8,303.1 301.7,251.7 338.7,218.7 375.7,193.3 412.6,254.1 449.6,261.4 486.5,195.3 523.5,275.0 560.4,266.8 597.4,280.4 634.3,227.4 671.3,72.7 708.3,60.0 745.2,89.5 782.2,85.1 819.1,197.7 856.1,243.7 893.0,324.6 930.0,382.8"/>
+<line x1="500" y1="515" x2="528" y2="515" stroke="#2ca02c" stroke-width="3"/>
+<text x="535" y="520" font-family="sans-serif" font-size="13">Seasonal Naive-24</text>
+<polyline fill="none" stroke="#9467bd" stroke-width="2.5" points="80.0,410.3 117.0,410.3 153.9,413.1 190.9,408.9 227.8,332.9 264.8,206.8 301.7,213.4 338.7,262.4 375.7,272.2 412.6,270.2 449.6,272.6 486.5,251.3 523.5,272.3 560.4,268.8 597.4,274.4 634.3,310.4 671.3,251.7 708.3,198.1 745.2,171.4 782.2,153.9 819.1,264.3 856.1,341.2 893.0,382.7 930.0,394.4"/>
+<line x1="710" y1="515" x2="738" y2="515" stroke="#9467bd" stroke-width="3"/>
+<text x="745" y="520" font-family="sans-serif" font-size="13">Selected-family W1</text>
+</svg>

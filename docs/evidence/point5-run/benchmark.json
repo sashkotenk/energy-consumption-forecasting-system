@@ -1,0 +1,55 @@
+{
+  "cv_acceleration": {
+    "backend": "shared-memory threads",
+    "effective_jobs": 2,
+    "final_benchmark_profile": "unchanged single-thread 3 measured training runs",
+    "prediction_timing_profile": "single-thread benchmark",
+    "requested_jobs": 2,
+    "scientific_invariants": [
+      "candidate configurations unchanged",
+      "chronological folds and 24-hour purge unchanged",
+      "random seed 42 unchanged",
+      "targets, metrics and selection rule unchanged",
+      "selection persisted before final-test access"
+    ],
+    "scope": "independent 24 direct horizons during CV and W1 final ablation only"
+  },
+  "feature_preparation": {
+    "measured_runs": 3,
+    "median_ms_full_hourly_frame": 43.27990700039663,
+    "warmup_runs": 1
+  },
+  "library_versions": {
+    "asyncpg": "0.31.0",
+    "joblib": "1.5.3",
+    "numpy": "2.4.6",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "sqlalchemy": "2.0.51"
+  },
+  "machine": {
+    "logical_cpus": 4,
+    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.13.14"
+  },
+  "model_bundle_bytes": 501502752,
+  "parallelism": "n_jobs=1 and threadpool limit 1 for scientific benchmark",
+  "prediction": {
+    "measured_runs": 30,
+    "median_ms": 392.551528997501,
+    "p95_ms": 411.77661209967476,
+    "warmup_runs": 1
+  },
+  "serialized_joblib_bytes": 505263668,
+  "training": {
+    "measured_runs": 3,
+    "median_seconds": 1102.2314343919988,
+    "seconds": [
+      1102.2314343919988,
+      1102.1498048230005,
+      1104.9476489690005
+    ],
+    "warmup_runs": 1
+  }
+}
