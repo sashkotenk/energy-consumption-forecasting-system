@@ -3,9 +3,13 @@
 
 This wrapper keeps the scientific protocol unchanged while removing avoidable
 re-training and parallelising the 24 independent direct forecast horizons during
-cross-validation.  Candidate grids, chronological folds, random seeds, metrics,
+cross-validation. Candidate grids, chronological folds, random seeds, metrics,
 selection rules, final-test isolation and the final single-thread benchmark all
 remain defined by ``run_point5_campaign.py``.
+
+Hosted runners have limited RAM. All CV horizon parallelism in this wrapper uses
+threads rather than joblib's process backend so the large feature matrices are
+shared read-only instead of being duplicated into worker processes.
 """
 
 from __future__ import annotations
@@ -42,6 +46,61 @@ def _progress(message: str) -> None:
 
 
 def _install_acceleration(campaign: Any, fit_jobs: int) -> None:
+    def fit_w0_horizon(
+        algorithm: Any,
+        parameters: dict[str, Any],
+        features: Any,
+        targets: Any,
+        horizon: int,
+    ) -> Any:
+        with campaign.threadpool_limits(limits=1):
+            target = targets[:, horizon]
+            if algorithm is campaign.AlgorithmType.RIDGE:
+                estimator = campaign.Ridge(**parameters).fit(features, target)
+            elif algorithm is campaign.AlgorithmType.RANDOM_FOREST:
+                estimator = campaign.RandomForestRegressor(
+                    **parameters, n_jobs=1
+                ).fit(features, target)
+            else:
+                estimator = campaign.HistGradientBoostingRegressor(**parameters).fit(
+                    features, target
+                )
+        return estimator
+
+    def fit_w0_model_threaded(
+        algorithm: Any,
+        parameters: dict[str, Any],
+        features: Any,
+        targets: Any,
+    ) -> Any:
+        model = campaign.create_model(
+            algorithm,
+            parameters=parameters,
+            runtime=campaign.ModelRuntime(
+                profile=campaign.ExecutionProfile.BENCHMARK,
+                random_seed=42,
+            ),
+        )
+        if algorithm is campaign.AlgorithmType.RIDGE:
+            model.scaler = campaign.StandardScaler().fit(features)
+            fit_features = np.asarray(model.scaler.transform(features), dtype=np.float64)
+        else:
+            model.scaler = None
+            fit_features = features
+        model.estimators = list(
+            campaign.joblib.Parallel(n_jobs=fit_jobs, prefer="threads")(
+                campaign.joblib.delayed(fit_w0_horizon)(
+                    algorithm,
+                    parameters,
+                    fit_features,
+                    targets,
+                    horizon,
+                )
+                for horizon in range(24)
+            )
+        )
+        return model
+
     def evaluate_w0_configuration(
         experiment_id: str,
         algorithm: Any,
@@ -68,25 +127,14 @@ def _install_acceleration(campaign: Any, fit_jobs: int) -> None:
                 prediction_started = time.perf_counter()
                 predicted = campaign.SeasonalNaive(168).predict(energy, origins)
             else:
-                model = campaign.create_model(
-                    algorithm,
-                    parameters=parameters,
-                    runtime=campaign.ModelRuntime(
-                        profile=campaign.ExecutionProfile.PRODUCTION,
-                        random_seed=42,
-                        production_n_jobs=fit_jobs,
-                    ),
-                )
                 training_started = time.perf_counter()
-                model.fit(matrix.features[fold.train_indices], matrix.targets[fold.train_indices])
-                train_seconds = time.perf_counter() - training_started
-
-                # Fit independent horizons in parallel, but preserve the frozen
-                # single-thread prediction timing used by the selection tie-break.
-                model.runtime = campaign.ModelRuntime(
-                    profile=campaign.ExecutionProfile.BENCHMARK,
-                    random_seed=42,
+                model = fit_w0_model_threaded(
+                    algorithm,
+                    parameters,
+                    matrix.features[fold.train_indices],
+                    matrix.targets[fold.train_indices],
                 )
+                train_seconds = time.perf_counter() - training_started
                 prediction_started = time.perf_counter()
                 predicted = model.predict(matrix.features[fold.validation_indices])
 
@@ -291,6 +339,7 @@ def _augment_runtime_evidence(campaign: Any, output_dir: Path, requested: int, e
     manifest["protocol"]["cv_fit_parallelism"] = {
         "requested_jobs": requested,
         "effective_jobs": effective,
+        "backend": "shared-memory threads",
         "scope": "independent 24 direct horizons during CV and W1 final ablation only",
         "prediction_timing_profile": "single-thread benchmark",
         "final_benchmark_profile": "unchanged single-thread 3 measured training runs",
@@ -314,9 +363,10 @@ def _augment_runtime_evidence(campaign: Any, output_dir: Path, requested: int, e
         destination.write(
             "\n## Execution acceleration\n\n"
             f"Cross-validation fitted the 24 independent direct horizons with **{effective} parallel jobs** "
-            "to fit inside hosted-runner limits. This changes execution scheduling only: candidate grids, "
-            "chronological folds, purge, random seed, targets, metrics and the selection rule are unchanged. "
-            "Prediction timing used for tie-breaking and the final three-repeat benchmark remain single-threaded.\n"
+            "using a shared-memory thread backend to stay within hosted-runner RAM limits. This changes "
+            "execution scheduling only: candidate grids, chronological folds, purge, random seed, targets, "
+            "metrics and the selection rule are unchanged. Prediction timing used for tie-breaking and the "
+            "final three-repeat benchmark remain single-threaded.\n"
         )
     return manifest
 
